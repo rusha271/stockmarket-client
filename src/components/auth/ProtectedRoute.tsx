@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated: _isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);

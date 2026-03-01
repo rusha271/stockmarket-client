@@ -11,6 +11,7 @@ const BROWSER_HEADERS = {
 
 const NSE_INDEX_TO_SYMBOL: Record<string, string> = {
   'NIFTY 50': '^NSEI',
+  'NIFTY MIDCAP 50': '^NIFTYMIDCAP50',
   'NIFTY BANK': '^NSEBANK',
   'NIFTY IT': '^CNXIT',
   'NIFTY PHARMA': '^CNXPHARMA',

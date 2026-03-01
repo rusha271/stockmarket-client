@@ -5,30 +5,30 @@ import {
   Container, 
   Typography, 
   Box, 
-  Card, 
-  CardContent, 
-  CardHeader,
-  Switch,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Button,
+  // Card,
+  // CardContent,
+  // CardHeader,
+  // Switch,
+  // FormControlLabel,
+  // Select,
+  // MenuItem,
+  // FormControl,
+  // InputLabel,
+  // Button,
   Alert,
   Snackbar
 } from '@mui/material';
 import { 
-  Palette as PaletteIcon,
-  Notifications as NotificationsIcon,
-  DataUsage as DataUsageIcon,
-  Security as PrivacyIcon,
-  Delete as DeleteIcon,
-  Download as DownloadIcon,
-  CloudUpload as CloudUploadIcon,
-  Refresh as RefreshIcon
+  // Palette as PaletteIcon,
+  // Notifications as NotificationsIcon,
+  // DataUsage as DataUsageIcon,
+  // Security as PrivacyIcon,
+  // Delete as DeleteIcon,
+  // Download as DownloadIcon,
+  // CloudUpload as CloudUploadIcon,
+  // Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { useTheme, useMediaQuery } from '@mui/material';
+// import { useTheme, useMediaQuery } from '@mui/material';
 import Layout from '@/components/layout/Layout';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NoSSR } from '@/components/common/NoSSR';
@@ -66,7 +66,7 @@ interface Settings {
   };
 }
 
-const defaultSettings: Settings = {
+const _defaultSettings: Settings = {
   appearance: {
     fontSize: 'medium',
     compactMode: false
@@ -100,7 +100,7 @@ const defaultSettings: Settings = {
   }
 };
 
-const timezones = [
+const _timezones = [
   'Asia/Kolkata',
   'Asia/Dubai',
   'America/New_York',
@@ -109,7 +109,7 @@ const timezones = [
   'Australia/Sydney'
 ];
 
-const languages = [
+const _languages = [
   { code: 'en', name: 'English' },
   { code: 'hi', name: 'हिन्दी' },
   { code: 'ta', name: 'தமிழ்' },

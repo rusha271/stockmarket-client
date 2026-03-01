@@ -229,7 +229,7 @@ export const LoginForm = ({ onSubmit, isLoading = false }: LoginFormProps) => {
           }}
         >
           <Typography variant="body2">
-            Don't have an account? Use the <strong>"Sign Up"</strong> tab to create an account and receive temporary login credentials.
+            Don&apos;t have an account? Use the <strong>&quot;Sign Up&quot;</strong> tab to create an account and receive temporary login credentials.
           </Typography>
         </Alert>
 

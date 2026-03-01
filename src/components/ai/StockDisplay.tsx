@@ -59,7 +59,7 @@ interface StockDisplayProps {
   quoteLoading?: boolean;
 }
 
-export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = false, quote: quoteFromParent, quoteLoading: quoteLoadingFromParent = false }) => {
+export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading: _isLoading = false, quote: quoteFromParent, quoteLoading: quoteLoadingFromParent = false }) => {
   const [quoteLocal, setQuoteLocal] = useState<QuoteData | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const theme = useTheme();
@@ -92,21 +92,21 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
     return (
       <Paper
         sx={{
-          p: 4,
+          p: { xs: 2.5, sm: 3, md: 4 },
           textAlign: 'center',
           background: theme.palette.mode === 'light' 
             ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)'
             : 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.8) 100%)',
           backdropFilter: 'blur(20px)',
-          borderRadius: 4,
+          borderRadius: { xs: 2, md: 4 },
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         }}
       >
-        <TimelineIcon sx={{ fontSize: '4rem', color: 'text.secondary', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary" gutterBottom>
+        <TimelineIcon sx={{ fontSize: { xs: '3rem', md: '4rem' }, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}>
           Select a stock to view detailed information
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
           Use the search above to find and select a stock
         </Typography>
       </Paper>
@@ -122,7 +122,7 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
   const high = quote?.high ?? stock.high ?? currentPrice * 1.05;
   const low = quote?.low ?? stock.low ?? currentPrice * 0.95;
   const open = quote?.open ?? stock.open ?? currentPrice;
-  const close = quote?.close ?? stock.close ?? currentPrice;
+  const _close = quote?.close ?? stock.close ?? currentPrice;
 
   return (
     <Fade in={!!stock} timeout={500}>
@@ -132,16 +132,17 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
             ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)'
             : 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.8) 100%)',
           backdropFilter: 'blur(20px)',
-          borderRadius: 4,
+          borderRadius: { xs: 2, md: 4 },
           border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
           boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
           overflow: 'hidden',
+          minWidth: 0,
         }}
       >
         {/* Stock Header - Compact */}
-        <Box sx={{ p: 3, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: '1 1 auto' }}>
               <Chip
                 label={stock.symbol}
                 size="small"
@@ -149,10 +150,10 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
                   backgroundColor: theme.palette.primary.main,
                   color: 'white',
                   fontWeight: 700,
-                  fontSize: '0.875rem',
+                  fontSize: { xs: '0.75rem', md: '0.875rem' },
                 }}
               />
-              <Typography variant="h6" fontWeight={600} color="text.primary">
+              <Typography variant="h6" fontWeight={600} color="text.primary" sx={{ fontSize: { xs: '0.9rem', md: '1rem' }, wordBreak: 'break-word' }}>
                 {stock.name}
               </Typography>
             </Box>
@@ -165,36 +166,36 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ flex: '1 1 200px', textAlign: 'center', p: 1 }}>
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1.5, sm: 2 } }}>
+            <Box sx={{ flex: '1 1 min(100%, 120px)', textAlign: 'center', p: { xs: 0.75, sm: 1 } }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
                 Current Price
               </Typography>
-              <Typography variant="h5" fontWeight={700} color="text.primary">
+              <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
                 ₹{currentPrice.toFixed(2)}
               </Typography>
             </Box>
-            <Box sx={{ flex: '1 1 200px', textAlign: 'center', p: 1 }}>
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+            <Box sx={{ flex: '1 1 min(100%, 120px)', textAlign: 'center', p: { xs: 0.75, sm: 1 } }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
                 Change
               </Typography>
-              <Typography variant="h5" fontWeight={700} sx={{ color: changeColor }}>
+              <Typography variant="h5" fontWeight={700} sx={{ color: changeColor, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
                 {isPositive ? '+' : ''}{change.toFixed(2)}
               </Typography>
             </Box>
-            <Box sx={{ flex: '1 1 200px', textAlign: 'center', p: 1 }}>
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+            <Box sx={{ flex: '1 1 min(100%, 120px)', textAlign: 'center', p: { xs: 0.75, sm: 1 } }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
                 Change %
               </Typography>
-              <Typography variant="h5" fontWeight={700} sx={{ color: changeColor }}>
+              <Typography variant="h5" fontWeight={700} sx={{ color: changeColor, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
                 {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
               </Typography>
             </Box>
-            <Box sx={{ flex: '1 1 200px', textAlign: 'center', p: 1 }}>
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+            <Box sx={{ flex: '1 1 min(100%, 120px)', textAlign: 'center', p: { xs: 0.75, sm: 1 } }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
                 Volume
               </Typography>
-              <Typography variant="h5" fontWeight={700} color="text.primary">
+              <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
                 {volume > 0
                   ? volume >= 1000000
                     ? `${(volume / 1000000).toFixed(1)}M`
@@ -208,7 +209,7 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
         </Box>
 
         {/* Key metrics: P/E ratio, 52-wk high, 52-wk low only */}
-        <Box sx={{ p: 3, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
           {dataLoadingOrQuoteLoading && (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 3, gap: 2 }}>
               <CircularProgress size={28} />
@@ -216,20 +217,20 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
             </Box>
           )}
           {!dataLoadingOrQuoteLoading && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-              <Box sx={{ flex: '1 1 120px', minWidth: 100, textAlign: 'center', p: 1.5 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1.5, sm: 2 } }}>
+              <Box sx={{ flex: '1 1 min(80px, 33%)', minWidth: 0, textAlign: 'center', p: { xs: 1, sm: 1.5 } }}>
                 <Typography variant="caption" color="text.secondary" display="block" gutterBottom>P/E ratio</Typography>
                 <Typography variant="body2" fontWeight={600} color="text.primary">
                   {quote?.pe && quote.pe > 0 ? quote.pe.toFixed(2) : '—'}
                 </Typography>
               </Box>
-              <Box sx={{ flex: '1 1 120px', minWidth: 100, textAlign: 'center', p: 1.5 }}>
+              <Box sx={{ flex: '1 1 min(80px, 33%)', minWidth: 0, textAlign: 'center', p: { xs: 1, sm: 1.5 } }}>
                 <Typography variant="caption" color="text.secondary" display="block" gutterBottom>52-wk high</Typography>
                 <Typography variant="body2" fontWeight={600} color="success.main">
                   {quote?.high52 && quote.high52 > 0 ? `₹${quote.high52.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
                 </Typography>
               </Box>
-              <Box sx={{ flex: '1 1 120px', minWidth: 100, textAlign: 'center', p: 1.5 }}>
+              <Box sx={{ flex: '1 1 min(80px, 33%)', minWidth: 0, textAlign: 'center', p: { xs: 1, sm: 1.5 } }}>
                 <Typography variant="caption" color="text.secondary" display="block" gutterBottom>52-wk low</Typography>
                 <Typography variant="body2" fontWeight={600} color="error.main">
                   {quote?.low52 && quote.low52 > 0 ? `₹${quote.low52.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
@@ -240,19 +241,19 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({ stock, isLoading = f
         </Box>
 
         {/* Day High / Low / Open */}
-        <Box sx={{ p: 3, pt: 0, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ flex: '1 1 150px', textAlign: 'center', p: 1 }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, pt: 0, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1.5, sm: 2 } }}>
+            <Box sx={{ flex: '1 1 min(100%, 80px)', textAlign: 'center', p: { xs: 0.75, sm: 1 } }}>
               <Typography variant="caption" color="text.secondary" display="block" gutterBottom>High</Typography>
-              <Typography variant="body1" fontWeight={600} color="text.primary">₹{high.toFixed(2)}</Typography>
+              <Typography variant="body1" fontWeight={600} color="text.primary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>₹{high.toFixed(2)}</Typography>
             </Box>
-            <Box sx={{ flex: '1 1 150px', textAlign: 'center', p: 1 }}>
+            <Box sx={{ flex: '1 1 min(100%, 80px)', textAlign: 'center', p: { xs: 0.75, sm: 1 } }}>
               <Typography variant="caption" color="text.secondary" display="block" gutterBottom>Low</Typography>
-              <Typography variant="body1" fontWeight={600} color="text.primary">₹{low.toFixed(2)}</Typography>
+              <Typography variant="body1" fontWeight={600} color="text.primary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>₹{low.toFixed(2)}</Typography>
             </Box>
-            <Box sx={{ flex: '1 1 150px', textAlign: 'center', p: 1 }}>
+            <Box sx={{ flex: '1 1 min(100%, 80px)', textAlign: 'center', p: { xs: 0.75, sm: 1 } }}>
               <Typography variant="caption" color="text.secondary" display="block" gutterBottom>Open</Typography>
-              <Typography variant="body1" fontWeight={600} color="text.primary">₹{open.toFixed(2)}</Typography>
+              <Typography variant="body1" fontWeight={600} color="text.primary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>₹{open.toFixed(2)}</Typography>
             </Box>
           </Box>
         </Box>

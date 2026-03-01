@@ -6,7 +6,7 @@ import {
   Box, 
   Chip, 
   IconButton, 
-  Avatar,
+  // Avatar,
   Tooltip,
   LinearProgress
 } from '@mui/material';

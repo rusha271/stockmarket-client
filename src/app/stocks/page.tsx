@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState /* , useEffect */ } from 'react';
 import { 
   Container, 
   Typography, 
   Box, 
-  Card, 
-  CardContent, 
+  // Card,
+  // CardContent,
   Chip, 
   IconButton,
   TextField,
@@ -33,14 +33,14 @@ import {
   Star as StarIcon,
   StarBorder as StarBorderIcon,
   Refresh as RefreshIcon,
-  FilterList as FilterIcon,
+  // FilterList as FilterIcon,
   ViewList as ListIcon,
   GridView as GridIcon
 } from '@mui/icons-material';
 import { useTheme, useMediaQuery } from '@mui/material';
 import Layout from '@/components/layout/Layout';
 import StockCard from '@/components/stocks/StockCard';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+// import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NoSSR } from '@/components/common/NoSSR';
 
 // Indian Equity Market Data
@@ -194,7 +194,7 @@ function TabPanel(props: TabPanelProps) {
 
 export default function StocksPage() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const _isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('All');
   const [viewMode, setViewMode] = useState(0); // 0: Grid, 1: List

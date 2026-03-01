@@ -4,7 +4,7 @@ import { DataGrid, GridColDef, GridRowsProp } from '@mui/x-data-grid';
 interface DataTableProps {
   columns: GridColDef[];
   rows: GridRowsProp;
-  onRowClick?: (row: any) => void;
+  onRowClick?: (row: Record<string, unknown>) => void;
   height?: number;
 }
 

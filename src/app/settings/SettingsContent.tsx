@@ -94,7 +94,7 @@ const defaultSettings: Settings = {
   }
 };
 
-const timezones = [
+const _timezones = [
   'Asia/Kolkata',
   'Asia/Dubai',
   'America/New_York',
@@ -122,7 +122,7 @@ interface SettingsContentProps {
 export default function SettingsContent({ onSave, onReset, onExport, onImport, onDelete, loading }: SettingsContentProps) {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
 
-  const handleSettingChange = (category: keyof Settings, key: string, value: any) => {
+  const handleSettingChange = (category: keyof Settings, key: string, value: string | number | boolean) => {
     setSettings(prev => ({
       ...prev,
       [category]: {

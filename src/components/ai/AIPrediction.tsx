@@ -8,25 +8,23 @@ import {
   Typography,
   LinearProgress,
   Chip,
-  Grid,
+  // Grid,
   Card,
   CardContent,
   alpha,
   Fade,
-  Zoom,
+  // Zoom,
   CircularProgress,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  // Stepper,
+  // Step,
+  // StepLabel,
+  // StepContent,
 } from '@mui/material';
 import {
-  Psychology as AIIcon,
+  Timeline as TimelineIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  Timeline as TimelineIcon,
-  Speed as SpeedIcon,
-  CheckCircle as CheckCircleIcon,
+  Refresh as RefreshIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
@@ -59,19 +57,19 @@ function computeDirection(currentPrice: number, predictedPrice: number): 'up' | 
 }
 
 interface AIPredictionProps {
-  stock: any;
+  stock: (Record<string, unknown> | { symbol?: string; price?: number; currentPrice?: number; changePercent?: number }) | null;
   /** Optional current price (e.g. quote.close) for frontend direction calculation. If not provided, uses stock.price / stock.currentPrice. */
   currentPrice?: number;
   onPredictionComplete?: (result: PredictionResult) => void;
 }
 
-const predictionSteps = [
+const analysisSteps = [
   'Analyzing market data...',
   'Processing technical indicators...',
-  'Evaluating market sentiment...',
-  'Running AI prediction models...',
-  'Generating insights...',
-  'Finalizing prediction...',
+  'Evaluating price action...',
+  'Computing risk metrics...',
+  'Generating analysis...',
+  'Finalizing results...',
 ];
 
 export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice: currentPriceProp, onPredictionComplete }) => {
@@ -82,7 +80,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
 
-  // Reset card to "Generate AI Prediction" state when user selects a different stock
+  // Reset card when user selects a different stock
   useEffect(() => {
     setPredictionResult(null);
     setError(null);
@@ -91,9 +89,9 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     setProgress(0);
   }, [stock?.symbol]);
 
-  const generateMockPrediction = (stockData: any): PredictionResult => {
-    const currentPrice = stockData.currentPrice;
-    const changePercent = stockData.changePercent;
+  const _generateMockPrediction = (stockData: Record<string, unknown>): PredictionResult => {
+    const currentPrice = Number(stockData.currentPrice) || 0;
+    const changePercent = Number(stockData.changePercent) || 0;
     
     // Simulate AI prediction logic
     const volatility = Math.random() * 0.1 + 0.05; // 5-15% volatility
@@ -141,8 +139,8 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
 
     const stepsInterval = setInterval(() => {
       setCurrentStep((s) => {
-        const next = Math.min(s + 1, predictionSteps.length - 1);
-        setProgress((next / predictionSteps.length) * 100);
+        const next = Math.min(s + 1, analysisSteps.length - 1);
+        setProgress((next / analysisSteps.length) * 100);
         return next;
       });
     }, 900);
@@ -176,7 +174,8 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
         ? rawReasoning.map((r: unknown) => (typeof r === 'string' ? r : r && typeof r === 'object' && 'msg' in r ? String((r as { msg: unknown }).msg) : String(r)))
         : [];
       const predictedPrice = Number(data.predictedPrice) || 0;
-      const currentPrice = currentPriceProp ?? stock?.price ?? stock?.currentPrice ?? 0;
+      const rawCurrent = currentPriceProp ?? (stock && typeof stock === 'object' && 'price' in stock ? (stock as { price?: number }).price : undefined) ?? (stock && typeof stock === 'object' && 'currentPrice' in stock ? (stock as { currentPrice?: number }).currentPrice : undefined);
+      const currentPrice = Number(rawCurrent) || 0;
       const direction = computeDirection(currentPrice, predictedPrice);
       const result: PredictionResult = {
         predictedPrice,
@@ -193,7 +192,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
       };
 
       setProgress(100);
-      setCurrentStep(predictionSteps.length - 1);
+      setCurrentStep(analysisSteps.length - 1);
       setPredictionResult(result);
       onPredictionComplete?.(result);
     } catch (err) {
@@ -242,12 +241,12 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         }}
       >
-        <AIIcon sx={{ fontSize: '4rem', color: 'text.secondary', mb: 2 }} />
+        <TimelineIcon sx={{ fontSize: '4rem', color: 'text.secondary', mb: 2 }} />
         <Typography variant="h6" color="text.secondary" gutterBottom>
-          AI Prediction Ready
+          Real Time Analysis Ready
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Select a stock to get AI-powered predictions
+          Select a stock to run real-time analysis
         </Typography>
       </Paper>
     );
@@ -260,18 +259,19 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
           ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)'
           : 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.8) 100%)',
         backdropFilter: 'blur(20px)',
-        borderRadius: 4,
+        borderRadius: { xs: 2, md: 4 },
         border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
         boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
         overflow: 'hidden',
+        minWidth: 0,
       }}
     >
-      <Box sx={{ p: 4 }}>
+      <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 3, md: 4 } }}>
           <Box
             sx={{
-              p: 2,
+              p: { xs: 1.5, md: 2 },
               borderRadius: 3,
               background: theme.palette.primary.gradient,
               display: 'flex',
@@ -280,31 +280,32 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
               boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.3)}`,
             }}
           >
-            <AIIcon sx={{ fontSize: '1.5rem', color: 'white' }} />
+            <TimelineIcon sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, color: 'white' }} />
           </Box>
-          <Box>
-            <Typography variant="h5" fontWeight={700} color="text.primary">
-              AI Stock Prediction
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
+              Real Time Analysis
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Advanced machine learning analysis for {stock.symbol}
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
+              Live market analysis for {stock && typeof stock === 'object' && 'symbol' in stock ? String((stock as { symbol?: string }).symbol ?? '') : ''}
             </Typography>
           </Box>
         </Box>
 
-        {/* Prediction Button */}
+        {/* Analysis Button */}
         {!predictionResult && !isPredicting && (
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 3, md: 4 } }}>
             <Button
               variant="contained"
               size="large"
               onClick={handlePredict}
-              startIcon={<AIIcon />}
+              startIcon={<TimelineIcon />}
               sx={{
-                px: 6,
-                py: 2,
+                px: { xs: 3, sm: 4, md: 6 },
+                py: { xs: 1.5, md: 2 },
+                minHeight: 48,
                 borderRadius: 3,
-                fontSize: '1.1rem',
+                fontSize: { xs: '0.95rem', md: '1.1rem' },
                 fontWeight: 700,
                 background: theme.palette.primary.gradient,
                 boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
@@ -315,19 +316,19 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              Generate AI Prediction
+              Run Real Time Analysis
             </Button>
           </Box>
         )}
 
-        {/* Prediction Progress */}
+        {/* Analysis Progress */}
         {isPredicting && (
           <Fade in timeout={300}>
             <Box sx={{ mb: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                 <CircularProgress size={24} />
                 <Typography variant="h6" fontWeight={600} color="text.primary">
-                  AI is analyzing...
+                  Analyzing market data...
                 </Typography>
               </Box>
               
@@ -346,7 +347,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
               />
               
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {predictionSteps[currentStep]}
+                {analysisSteps[currentStep]}
               </Typography>
               
               <Typography variant="caption" color="text.secondary">
@@ -370,7 +371,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
               <Button
                 variant="outlined"
                 onClick={handlePredict}
-                startIcon={<AIIcon />}
+                startIcon={<TimelineIcon />}
               >
                 Try Again
               </Button>
@@ -378,29 +379,31 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
           </Fade>
         )}
 
-        {/* Prediction Results */}
+        {/* Analysis Results */}
         {predictionResult && (
           <Fade in timeout={500}>
             <Box>
-              {/* Main Prediction */}
+              {/* Main Result Card */}
               <Card
                 sx={{
-                  mb: 4,
+                  mb: 3,
                   background: theme.palette.mode === 'light' 
                     ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%)'
                     : 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%)',
                   backdropFilter: 'blur(10px)',
                   border: `2px solid ${alpha(getDirectionColor(predictionResult.direction), 0.3)}`,
+                  borderRadius: 2,
                 }}
               >
-                <CardContent sx={{ p: 4 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                    <Typography variant="h6" fontWeight={700} color="text.primary">
-                      AI Prediction Result
+                <CardContent sx={{ p: { xs: 2.5, sm: 3, md: 4 } }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 3 }}>
+                    <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                      Real Time Analysis Result
                     </Typography>
                     <Chip
                       icon={getDirectionIcon(predictionResult.direction)}
                       label={predictionResult.direction.toUpperCase()}
+                      size="small"
                       sx={{
                         backgroundColor: getDirectionColor(predictionResult.direction),
                         color: 'white',
@@ -409,37 +412,38 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
                     />
                   </Box>
                   
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                    <Box sx={{ flex: '1 1 200px', textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' }, gap: 2.5 }}>
+                    <Box sx={{ textAlign: { xs: 'left', sm: 'center' }, p: { xs: 1, sm: 0 } }}>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Predicted Price
                       </Typography>
-                      <Typography variant="h4" fontWeight={700} color="text.primary">
+                      <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                         ₹{predictionResult.predictedPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Typography>
                     </Box>
-                    <Box sx={{ flex: '1 1 200px', textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <Box sx={{ textAlign: { xs: 'left', sm: 'center' }, p: { xs: 1, sm: 0 } }}>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Confidence
                       </Typography>
-                      <Typography variant="h4" fontWeight={700} color="text.primary">
+                      <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                         {(predictionResult.confidence * 100).toFixed(0)}%
                       </Typography>
                     </Box>
-                    <Box sx={{ flex: '1 1 200px', textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <Box sx={{ textAlign: { xs: 'left', sm: 'center' }, p: { xs: 1, sm: 0 }, gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Timeframe
                       </Typography>
-                      <Typography variant="h4" fontWeight={700} color="text.primary">
+                      <Typography variant="body1" fontWeight={600} color="text.primary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
                         {predictionResult.timeframe}
                       </Typography>
                     </Box>
-                    <Box sx={{ flex: '1 1 200px', textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <Box sx={{ textAlign: { xs: 'left', sm: 'center' }, p: { xs: 1, sm: 0 } }}>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5, fontSize: '0.75rem' }}>
                         Risk Level
                       </Typography>
                       <Chip
                         label={predictionResult.riskLevel.toUpperCase()}
+                        size="small"
                         sx={{
                           backgroundColor: getRiskColor(predictionResult.riskLevel),
                           color: 'white',
@@ -450,6 +454,21 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
                   </Box>
                 </CardContent>
               </Card>
+
+              {/* Disclaimer */}
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  bgcolor: theme.palette.mode === 'light' ? 'grey.50' : 'grey.900',
+                  borderColor: 'divider',
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.6, fontSize: '0.7rem' }}>
+                  <strong>Disclaimer:</strong> This analysis is for informational and educational purposes only and does not constitute investment advice, financial advice, or a recommendation to buy or sell any security. Past performance and real-time analysis do not guarantee future results. Markets are subject to risk; you may lose capital. Always do your own research and consider consulting a qualified financial advisor before making investment decisions.
+                </Typography>
+              </Paper>
 
               {/* Analysis Factors - commented out
               <Card sx={{ mb: 4 }}>
@@ -477,7 +496,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
                       </Typography>
                     </Box>
                     <Box sx={{ flex: '1 1 200px', textAlign: 'center', p: 2 }}>
-                      <AIIcon sx={{ fontSize: '2rem', color: 'secondary.main', mb: 1 }} />
+                      <TimelineIcon sx={{ fontSize: '2rem', color: 'secondary.main', mb: 1 }} />
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         Sentiment Analysis
                       </Typography>
@@ -490,39 +509,22 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
               </Card>
               */}
 
-              {/* Reasoning */}
-              <Card>
-                <CardContent sx={{ p: 4 }}>
-                  <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 3 }}>
-                    AI Reasoning
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {predictionResult.reasoning.map((reason, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <CheckCircleIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
-                        <Typography variant="body1" color="text.primary">
-                          {reason}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </CardContent>
-              </Card>
-
-              {/* Regenerate Button */}
-              <Box sx={{ textAlign: 'center', mt: 4 }}>
+              {/* Run Again Button */}
+              <Box sx={{ textAlign: 'center', mt: { xs: 2, md: 3 } }}>
                 <Button
                   variant="outlined"
                   onClick={handlePredict}
-                  startIcon={<AIIcon />}
+                  startIcon={<RefreshIcon />}
                   sx={{
-                    px: 4,
-                    py: 1.5,
+                    px: { xs: 3, md: 4 },
+                    py: { xs: 1.5, md: 1.5 },
+                    minHeight: 48,
                     borderRadius: 3,
                     fontWeight: 600,
+                    fontSize: { xs: '0.9rem', md: '1rem' },
                   }}
                 >
-                  Regenerate Prediction
+                  Run Analysis Again
                 </Button>
               </Box>
             </Box>

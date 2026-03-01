@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState /* , useEffect */ } from 'react';
 import { 
   Container, 
   Typography, 
@@ -10,7 +10,7 @@ import {
   CardHeader,
   Chip,
   LinearProgress,
-  Alert,
+  // Alert,
   Tabs,
   Tab,
   Paper,
@@ -19,7 +19,7 @@ import {
   ListItemText,
   ListItemIcon,
   Avatar,
-  Divider,
+  // Divider,
   IconButton,
   Tooltip
 } from '@mui/material';
@@ -30,7 +30,7 @@ import {
   Psychology as PsychologyIcon,
   Timeline as TimelineIcon,
   BarChart as BarChartIcon,
-  PieChart as PieChartIcon,
+  // PieChart as PieChartIcon,
   Refresh as RefreshIcon,
   Download as DownloadIcon,
   Share as ShareIcon,
@@ -38,10 +38,10 @@ import {
 } from '@mui/icons-material';
 import { useTheme, useMediaQuery } from '@mui/material';
 import Layout from '@/components/layout/Layout';
-import LineChart from '@/components/charts/LineChart';
+// import LineChart from '@/components/charts/LineChart';
 import BarChart from '@/components/charts/BarChart';
 import PieChart from '@/components/charts/PieChart';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+// import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NoSSR } from '@/components/common/NoSSR';
 
 // Mock data for insights
@@ -145,7 +145,7 @@ function TabPanel(props: TabPanelProps) {
 
 export default function InsightsPage() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const _isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
 

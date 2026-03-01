@@ -12,7 +12,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface PieChartProps {
   data: ChartData;
-  options?: any;
+  options?: Record<string, unknown>;
   height?: number;
 }
 

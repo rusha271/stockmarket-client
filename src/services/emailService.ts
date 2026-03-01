@@ -28,7 +28,7 @@ export const emailService: EmailService = {
         success: true,
         message: `Temporary credentials sent to ${email}. Check your email and use the provided credentials to login.`
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         message: 'Failed to send temporary credentials. Please try again.'
@@ -49,7 +49,7 @@ export const emailService: EmailService = {
         success: true,
         message: `Verification email sent to ${email}. Please check your inbox and click the verification link.`
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         message: 'Failed to send verification email. Please try again.'

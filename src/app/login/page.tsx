@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
   Container, 
-  Paper, 
+  // Paper,
   Typography, 
   Box, 
   Tabs, 
@@ -14,8 +14,8 @@ import {
   Fade,
   Card,
   CardContent,
-  Divider,
-  Link,
+  // Divider,
+  // Link,
   LinearProgress
 } from '@mui/material';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -27,7 +27,7 @@ import { emailService } from '@/services/emailService';
 import { 
   Login as LoginIcon, 
   PersonAdd as SignupIcon,
-  TrendingUp as TrendingUpIcon
+  // TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
@@ -53,7 +53,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-export default function AuthPage() {
+function LoginPageContent() {
   const [tabValue, setTabValue] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -515,5 +515,13 @@ export default function AuthPage() {
         </Snackbar>
       </Container>
     </Box>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Initializing..." />}>
+      <LoginPageContent />
+    </Suspense>
   );
 } 

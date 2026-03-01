@@ -11,10 +11,8 @@ import {
   Zoom,
 } from '@mui/material';
 import {
-  Psychology as AIIcon,
-  TrendingUp as TrendingUpIcon,
-  Search as SearchIcon,
   Timeline as TimelineIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { StockSearch } from './StockSearch';
@@ -68,7 +66,7 @@ export const AIPredictionDashboard: React.FC = () => {
   const [selectedStock, setSelectedStock] = useState<StockOption | null>(null);
   const [stockQuote, setStockQuote] = useState<StockQuoteFromAPI | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
-  const [predictionResult, setPredictionResult] = useState<PredictionResult | null>(null);
+  const [_predictionResult, setPredictionResult] = useState<PredictionResult | null>(null);
   const theme = useTheme();
 
   const handleStockSelect = (stock: StockOption | null) => {
@@ -153,7 +151,7 @@ export const AIPredictionDashboard: React.FC = () => {
                   boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.3)}`,
                 }}
               >
-                <AIIcon sx={{ fontSize: '2rem', color: 'white' }} />
+                <TimelineIcon sx={{ fontSize: '2rem', color: 'white' }} />
               </Box>
               <Box sx={{ textAlign: 'left' }}>
                 <Typography 
@@ -167,17 +165,17 @@ export const AIPredictionDashboard: React.FC = () => {
                     mb: 1,
                   }}
                 >
-                  AI Stock Predictor
+                  Real Time Analysis
                 </Typography>
                 <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  Advanced machine learning predictions for smarter investing
+                  Live market analysis and technical insights
                 </Typography>
               </Box>
             </Box>
             
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-              Search for any stock symbol or company name to get AI-powered predictions, 
-              technical analysis, and market insights powered by advanced machine learning algorithms.
+              Search for any stock symbol or company name to get real-time analysis, 
+              technical indicators, and market insights.
             </Typography>
           </Box>
         </Fade>
@@ -240,15 +238,15 @@ export const AIPredictionDashboard: React.FC = () => {
 
         {/* Features Section - Single Row */}
         <Fade in timeout={1400}>
-          <Box sx={{ mt: 8 }}>
-            <Typography variant="h4" fontWeight={700} color="text.primary" sx={{ textAlign: 'center', mb: 4 }}>
-              AI-Powered Features
+          <Box sx={{ mt: { xs: 6, md: 8 }, px: { xs: 0.5, sm: 0 } }}>
+            <Typography variant="h4" fontWeight={700} color="text.primary" sx={{ textAlign: 'center', mb: { xs: 3, md: 4 }, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' } }}>
+              Features
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-              <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 2, md: 3 } }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Paper
                   sx={{
-                    p: 3,
+                    p: { xs: 2, md: 3 },
                     textAlign: 'center',
                     background: theme.palette.mode === 'light' 
                       ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%)'
@@ -263,20 +261,20 @@ export const AIPredictionDashboard: React.FC = () => {
                     },
                   }}
                 >
-                  <AIIcon sx={{ fontSize: '2.5rem', color: 'primary.main', mb: 2 }} />
-                  <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 1.5 }}>
-                    Machine Learning Predictions
+                  <TimelineIcon sx={{ fontSize: { xs: '2rem', md: '2.5rem' }, color: 'primary.main', mb: 2 }} />
+                  <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 1.5, fontSize: { xs: '0.95rem', md: '1.25rem' } }}>
+                    Real Time Analysis
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                    Advanced AI algorithms analyze market data, technical indicators, and sentiment to provide accurate price predictions.
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
+                  Live market data, technical indicators, and price action are analyzed to produce predicted levels, confidence, and timeframe for your reference.
                   </Typography>
                 </Paper>
               </Box>
               
-              <Box sx={{ flex: 1 }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Paper
                   sx={{
-                    p: 3,
+                    p: { xs: 2, md: 3 },
                     textAlign: 'center',
                     background: theme.palette.mode === 'light' 
                       ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%)'
@@ -309,19 +307,19 @@ export const AIPredictionDashboard: React.FC = () => {
                       }}
                     />
                   </Box>
-                  <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 1.5 }}>
+                  <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 1.5, fontSize: { xs: '0.95rem', md: '1.25rem' } }}>
                     Real-time Analysis
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                    Live market data analysis with candlestick charts, volume indicators, and technical analysis tools.
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
+                  Live data streams are continuously analyzed to detect trend shifts, volatility changes, and momentum signals — enabling faster and more informed trading decisions.
                   </Typography>
                 </Paper>
               </Box>
               
-              <Box sx={{ flex: 1 }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Paper
                   sx={{
-                    p: 3,
+                    p: { xs: 2, md: 3 },
                     textAlign: 'center',
                     background: theme.palette.mode === 'light' 
                       ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%)'
@@ -336,11 +334,11 @@ export const AIPredictionDashboard: React.FC = () => {
                     },
                   }}
                 >
-                  <TimelineIcon sx={{ fontSize: '2.5rem', color: 'info.main', mb: 2 }} />
-                  <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 1.5 }}>
+                  <TimelineIcon sx={{ fontSize: { xs: '2rem', md: '2.5rem' }, color: 'info.main', mb: 2 }} />
+                  <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 1.5, fontSize: { xs: '0.95rem', md: '1.25rem' } }}>
                     Risk Assessment
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
                     Comprehensive risk analysis with confidence levels and market sentiment evaluation for informed decisions.
                   </Typography>
                 </Paper>

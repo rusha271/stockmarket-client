@@ -14,6 +14,7 @@ import {
   Popper,
   alpha,
 } from '@mui/material';
+import type { PopperProps } from '@mui/material/Popper';
 import {
   Search as SearchIcon,
   Business as BusinessIcon,
@@ -109,7 +110,7 @@ interface StockSearchProps {
 export const StockSearch: React.FC<StockSearchProps> = ({
   onStockSelect,
   selectedStock,
-  isLoading = false,
+  isLoading: _isLoading = false,
   quoteOHLC = null,
   quoteLoading = false,
 }) => {
@@ -139,7 +140,7 @@ export const StockSearch: React.FC<StockSearchProps> = ({
     setOpen(false);
   };
 
-  const formatChange = (change: number, changePercent: number) => {
+  const _formatChange = (change: number, changePercent: number) => {
     const isPositive = change >= 0;
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -156,12 +157,17 @@ export const StockSearch: React.FC<StockSearchProps> = ({
     );
   };
 
-  const CustomPopper = (props: any) => (
+  const CustomPopper = (props: PopperProps) => {
+    const el = props.anchorEl != null && typeof props.anchorEl === 'object' && 'offsetWidth' in props.anchorEl
+      ? (props.anchorEl as HTMLElement)
+      : null;
+    const width = el?.offsetWidth ?? '100%';
+    return (
     <Popper
       {...props}
       placement="bottom"
       style={{ 
-        width: props.anchorEl?.offsetWidth || '100%', 
+        width,
         zIndex: 9999,
         left: '50%',
         transform: 'translateX(-50%)',
@@ -196,9 +202,10 @@ export const StockSearch: React.FC<StockSearchProps> = ({
       ]}
     />
   );
+  };
 
   return (
-    <Box sx={{ width: '100%', position: 'relative' }}>
+    <Box sx={{ width: '100%', minWidth: 0, position: 'relative' }}>
       <Autocomplete
         open={open}
         onOpen={() => setOpen(true)}
@@ -233,12 +240,13 @@ export const StockSearch: React.FC<StockSearchProps> = ({
           <TextField
             {...params}
             ref={inputRef}
-            placeholder="Search for Nifty 50 stocks (e.g., RELIANCE, TCS, HDFCBANK)"
+            placeholder="Search Nifty 50 (e.g. RELIANCE, TCS)"
             variant="outlined"
             fullWidth
             sx={{
               '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
+                borderRadius: { xs: 2, md: 3 },
+                minHeight: { xs: 48, md: 56 },
                 backgroundColor: theme.palette.mode === 'light' 
                   ? 'rgba(255, 255, 255, 0.9)' 
                   : 'rgba(30, 41, 59, 0.9)',

@@ -4,10 +4,10 @@ import React, { useState, useEffect, Suspense, lazy, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useMarketIndices } from '@/hooks/useMarketIndices';
 import { useAPICounter } from '@/context/APICounterContext';
-import { Stock } from '@/types/stock';
+// import { Stock } from '@/types/stock';
 import StockCard from '@/components/stocks/StockCard';
-import PrimeStockTable from '@/components/common/PrimeStockTable';
-import SearchBar from '@/components/common/SearchBar';
+// import PrimeStockTable from '@/components/common/PrimeStockTable';
+// import SearchBar from '@/components/common/SearchBar';
 import CustomButton from '@/components/common/CustomButton';
 import Layout from '@/components/layout/Layout';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -34,7 +34,7 @@ import {
   AttachMoney as AttachMoneyIcon,
   ShowChart as ShowChartIcon,
   Refresh as RefreshIcon,
-  Star as StarIcon
+  // Star as StarIcon
 } from '@mui/icons-material';
 import { useTheme, useMediaQuery } from '@mui/material';
 
@@ -192,7 +192,7 @@ const indianStocks = [
 
 const INDEX_DISPLAY_NAMES: Record<string, string> = {
   '^NSEI': 'Nifty 50',
-  '^BSESN': 'Sensex',
+  '^NIFTYMIDCAP50': 'Nifty Midcap 50',
   '^NSEBANK': 'Nifty Bank',
   '^CNXIT': 'Nifty IT',
   '^CNXPHARMA': 'Nifty Pharma',
@@ -201,7 +201,7 @@ const INDEX_DISPLAY_NAMES: Record<string, string> = {
   '^CNXMETAL': 'Nifty Metal',
 };
 
-const portfolioSummary = {
+const _portfolioSummary = {
   totalValue: 1250000,
   totalInvested: 1100000,
   totalReturns: 150000,
@@ -226,7 +226,7 @@ export default function DashboardContent() {
   const { isAuthenticated, user } = useAuth();
   const { count, increment } = useAPICounter();
   const { data: marketIndicesData, loading: marketIndicesLoading, error: marketIndicesError, refetch: refetchMarketIndices } = useMarketIndices();
-  const [search, setSearch] = useState('');
+  const [search, _setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -314,7 +314,10 @@ export default function DashboardContent() {
         <Box sx={{ 
           minHeight: '100vh', 
           background: theme.palette.background.default,
-          p: { xs: 1, sm: 2, md: 3 }
+          p: { xs: 1, sm: 1.5, md: 2, lg: 3 },
+          px: { xs: 1.5, sm: 2 },
+          overflowX: 'hidden',
+          minWidth: 0,
         }}>
         {/* Loading Overlay - only show on client */}
         {isInitialLoad && (
@@ -339,19 +342,20 @@ export default function DashboardContent() {
         )}
         
         {/* Welcome Header */}
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Box sx={{ mb: { xs: 3, md: 4 }, textAlign: 'center', px: { xs: 0.5, sm: 0 } }}>
           <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ 
-            fontSize: { xs: '1.8rem', md: '2.2rem' },
+            fontSize: { xs: '1.35rem', sm: '1.6rem', md: '2rem', lg: '2.2rem' },
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            mb: 1
+            mb: 1,
+            wordBreak: 'break-word',
           }}>
             Welcome back, {user?.name || 'Trader'}! 👋
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Here's your EquaityWaves.ai dashboard
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+            Here&apos;s your EquaityWaves.ai dashboard
           </Typography>
         </Box>
 
@@ -365,12 +369,12 @@ export default function DashboardContent() {
                   <Typography variant="h6" fontWeight="bold">Portfolio Value</Typography>
                 </Box>
                 <Typography variant="h4" fontWeight="bold" color="primary.main">
-                  ₹{portfolioSummary.totalValue.toLocaleString()}
+                  ₹{_portfolioSummary.totalValue.toLocaleString()}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                  {portfolioSummary.dayChange >= 0 ? <TrendingUpIcon color="success" fontSize="small" /> : <TrendingDownIcon color="error" fontSize="small" />}
-                  <Typography variant="body2" color={portfolioSummary.dayChange >= 0 ? 'success.main' : 'error.main'} sx={{ ml: 0.5 }}>
-                    {portfolioSummary.dayChange >= 0 ? '+' : ''}₹{portfolioSummary.dayChange.toLocaleString()} ({portfolioSummary.dayChangePercent >= 0 ? '+' : ''}{portfolioSummary.dayChangePercent.toFixed(2)}%)
+                  {_portfolioSummary.dayChange >= 0 ? <TrendingUpIcon color="success" fontSize="small" /> : <TrendingDownIcon color="error" fontSize="small" />}
+                  <Typography variant="body2" color={_portfolioSummary.dayChange >= 0 ? 'success.main' : 'error.main'} sx={{ ml: 0.5 }}>
+                    {_portfolioSummary.dayChange >= 0 ? '+' : ''}₹{_portfolioSummary.dayChange.toLocaleString()} ({_portfolioSummary.dayChangePercent >= 0 ? '+' : ''}{_portfolioSummary.dayChangePercent.toFixed(2)}%)
                   </Typography>
                 </Box>
               </CardContent>
@@ -385,10 +389,10 @@ export default function DashboardContent() {
                   <Typography variant="h6" fontWeight="bold">Total Returns</Typography>
                 </Box>
                 <Typography variant="h4" fontWeight="bold" color="success.main">
-                  ₹{portfolioSummary.totalReturns.toLocaleString()}
+                  ₹{_portfolioSummary.totalReturns.toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
-                  +{portfolioSummary.returnPercentage.toFixed(2)}% overall
+                  +{_portfolioSummary.returnPercentage.toFixed(2)}% overall
                 </Typography>
               </CardContent>
             </Card>
@@ -402,7 +406,7 @@ export default function DashboardContent() {
                   <Typography variant="h6" fontWeight="bold">Invested Amount</Typography>
                 </Box>
                 <Typography variant="h4" fontWeight="bold" color="text.primary">
-                  ₹{portfolioSummary.totalInvested.toLocaleString()}
+                  ₹{_portfolioSummary.totalInvested.toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   Total invested capital
@@ -430,23 +434,29 @@ export default function DashboardContent() {
         </Box> */}
 
         {/* Market Indices - Enhanced */}
-        <Card elevation={0} sx={{ border: 1, borderColor: 'divider', mb: 4 }}>
+        <Card elevation={0} sx={{ border: 1, borderColor: 'divider', mb: { xs: 3, md: 4 }, overflow: 'hidden' }}>
           <CardHeader 
             title="Indian Market Indices" 
             subheader="Live market performance across major indices"
+            sx={{
+              flexWrap: 'wrap',
+              '& .MuiCardHeader-title': { fontSize: { xs: '1rem', sm: '1.25rem' } },
+              '& .MuiCardHeader-subheader': { fontSize: { xs: '0.75rem', sm: '0.875rem' } },
+            }}
             action={
               <Tooltip title="Refresh Market Data">
                 <IconButton
                   onClick={() => refetchMarketIndices()}
                   disabled={marketIndicesLoading}
                   aria-label="Refresh market indices"
+                  sx={{ mt: { xs: -0.5, sm: 0 } }}
                 >
                   <RefreshIcon />
                 </IconButton>
               </Tooltip>
             }
           />
-          <CardContent>
+          <CardContent sx={{ pt: { xs: 0, sm: 1 }, px: { xs: 1.5, sm: 2, md: 3 }, pb: { xs: 2, sm: 3 } }}>
             {marketIndicesLoading && marketIndicesDisplay.length === 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <LoadingSpinner />
@@ -458,11 +468,11 @@ export default function DashboardContent() {
                 </Typography>
               </Box>
             ) : (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                {marketIndicesDisplay.map((index, idx) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1.5, sm: 2 } }}>
+                {marketIndicesDisplay.map((index, _idx) => (
                   <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: 0 }} key={index.symbol}>
                     <Paper sx={{ 
-                      p: 3, 
+                      p: { xs: 2, sm: 2.5, md: 3 }, 
                       border: 1, 
                       borderColor: 'divider',
                       transition: 'all 0.3s ease',
@@ -473,8 +483,8 @@ export default function DashboardContent() {
                           : '0 8px 25px rgba(0,0,0,0.3)',
                       }
                     }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
+                        <Typography variant="subtitle2" fontWeight="bold" color="text.primary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                           {index.name}
                         </Typography>
                         <Chip 
@@ -482,10 +492,10 @@ export default function DashboardContent() {
                           size="small" 
                           color="primary" 
                           variant="outlined"
-                          sx={{ fontSize: '0.7rem' }}
+                          sx={{ fontSize: '0.65rem', height: { xs: 20, sm: 24 } }}
                         />
                       </Box>
-                      <Typography variant="h5" fontWeight="bold" color="text.primary" sx={{ mb: 1 }}>
+                      <Typography variant="h5" fontWeight="bold" color="text.primary" sx={{ mb: 1, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
                         {index.value.toLocaleString('en-IN')}
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -510,14 +520,14 @@ export default function DashboardContent() {
         </Card>
 
         {/* Navigation Tabs */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: { xs: 3, md: 4 }, overflow: 'hidden' }}>
           <Paper
             sx={{
               background: theme.palette.mode === 'light' 
                 ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)'
                 : 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.8) 100%)',
               backdropFilter: 'blur(20px)',
-              borderRadius: 4,
+              borderRadius: { xs: 2, md: 4 },
               border: `1px solid ${theme.palette.mode === 'light' 
                 ? 'rgba(255, 255, 255, 0.3)' 
                 : 'rgba(255, 255, 255, 0.1)'}`,
@@ -531,11 +541,15 @@ export default function DashboardContent() {
               onChange={handleTabChange}
               variant={isMobile ? "scrollable" : "fullWidth"}
               scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
+                minHeight: { xs: 48, md: 64 },
                 '& .MuiTab-root': {
-                  py: 2,
+                  py: { xs: 1.5, md: 2 },
+                  px: { xs: 2, md: 3 },
+                  minHeight: { xs: 48, md: 64 },
                   fontWeight: 700,
-                  fontSize: { xs: '0.9rem', md: '1.1rem' },
+                  fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1.1rem' },
                   textTransform: 'none',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   borderRadius: '12px 12px 0 0',
@@ -551,12 +565,12 @@ export default function DashboardContent() {
                   }
                 },
                 '& .MuiTabs-indicator': {
-                  display: 'none', // Hide the default indicator
+                  display: 'none',
                 }
               }}
             >
               {/* <Tab label="Portfolio Overview" /> */}
-              <Tab label="AI Stock Predictor" />
+              <Tab label="Real Time Analysis" />
               {/* <Tab label="Market Analysis" /> */}
             </Tabs>
           </Paper>

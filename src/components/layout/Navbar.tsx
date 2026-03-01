@@ -8,14 +8,14 @@ import InputBase from '@mui/material/InputBase';
 import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+// import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Divider from '@mui/material/Divider';
+// import Menu from '@mui/material/Menu';
+// import MenuItem from '@mui/material/MenuItem';
+// import ListItemIcon from '@mui/material/ListItemIcon';
+// import ListItemText from '@mui/material/ListItemText';
+// import Divider from '@mui/material/Divider';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme, useMediaQuery, alpha } from '@mui/material';
 import { useRouter } from 'next/navigation';
@@ -25,11 +25,11 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
-  const { user, logout } = useAuth();
+  const { user: _user, logout } = useAuth();
   const theme = useTheme();
   const router = useRouter();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [_anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchValue, setSearchValue] = useState('');
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -40,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const _handleLogout = () => {
     logout();
     handleProfileMenuClose();
     router.push('/login');
@@ -76,17 +76,20 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
         <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 2 }}>
           <IconButton 
             onClick={onSidebarToggle} 
+            aria-label="Toggle menu"
             sx={{ 
               mr: { xs: 0.5, sm: 1 }, 
               display: { xs: 'inline-flex', md: 'none' },
               bgcolor: alpha(theme.palette.primary.main, 0.1),
-              p: { xs: 0.75, sm: 1 },
+              p: { xs: 1, sm: 1.25 },
+              minWidth: 44,
+              minHeight: 44,
               '&:hover': {
                 bgcolor: alpha(theme.palette.primary.main, 0.2),
               }
             }}
           >
-            <MenuIcon sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
+            <MenuIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
           </IconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1 } }}>
             <Box
@@ -124,7 +127,8 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
               bgcolor: alpha(theme.palette.background.paper, 0.8),
               border: 1,
               borderColor: alpha(theme.palette.divider, 0.5),
-              width: { xs: 120, sm: 200, md: 300 },
+              width: { xs: 'min(140px, 35vw)', sm: 200, md: 300 },
+              minWidth: 0,
               transition: 'all 0.2s',
               '&:focus-within': {
                 borderColor: theme.palette.primary.main,
@@ -237,8 +241,8 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
 
             {/* Profile / Settings dropdown - commented out for now
             <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
+              anchorEl={_anchorEl}
+              open={Boolean(_anchorEl)}
               onClose={handleProfileMenuClose}
               PaperProps={{
                 sx: {
@@ -263,7 +267,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
               </MenuItem>
               <Divider />
               <MenuItem 
-                onClick={handleLogout} 
+                onClick={_handleLogout} 
                 sx={{ 
                   color: 'error.main',
                   '&:hover': {

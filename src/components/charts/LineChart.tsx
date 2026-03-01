@@ -17,7 +17,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 interface LineChartProps {
   data: ChartData;
-  options?: any;
+  options?: Record<string, unknown>;
   height?: number;
 }
 
@@ -101,8 +101,8 @@ const LineChart: React.FC<LineChartProps> = ({ data, options, height = 220 }) =>
             size: 12,
             weight: 500,
           },
-          callback: function(value: any) {
-            return '₹' + value.toFixed(2);
+          callback: function(value: number | string) {
+            return '₹' + Number(value).toFixed(2);
           },
         },
         border: {
@@ -127,7 +127,7 @@ const LineChart: React.FC<LineChartProps> = ({ data, options, height = 220 }) =>
     },
     interaction: {
       intersect: false,
-      mode: 'index',
+      mode: 'index' as const,
     },
   };
 

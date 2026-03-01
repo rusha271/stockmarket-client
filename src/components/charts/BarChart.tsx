@@ -16,7 +16,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 interface BarChartProps {
   data: ChartData;
-  options?: any;
+  options?: Record<string, unknown>;
   height?: number;
 }
 

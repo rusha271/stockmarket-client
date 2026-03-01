@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React /* , { useState } */ from 'react';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import HomeIcon from '@mui/icons-material/Home';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import InsightsIcon from '@mui/icons-material/Insights';
-import PersonIcon from '@mui/icons-material/Person';
-import SettingsIcon from '@mui/icons-material/Settings';
-import MenuIcon from '@mui/icons-material/Menu';
+// import ShowChartIcon from '@mui/icons-material/ShowChart';
+// import InsightsIcon from '@mui/icons-material/Insights';
+// import PersonIcon from '@mui/icons-material/Person';
+// import SettingsIcon from '@mui/icons-material/Settings';
+// import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Divider from '@mui/material/Divider';
@@ -122,8 +122,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle }) => {
                   mb: 1,
                   mx: 1,
                   justifyContent: open ? 'flex-start' : 'center',
-                  py: 1.5,
+                  py: { xs: 1.75, sm: 1.5 },
                   px: 2,
+                  minHeight: 48,
                   bgcolor: active ? alpha('#ffffff', 0.2) : 'transparent',
                   color: active ? 'white' : alpha('#ffffff', 0.8),
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',

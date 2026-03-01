@@ -121,8 +121,8 @@ export async function GET(request: Request) {
     const intraDay = priceInfo?.intraDayHighLow as { min?: number; max?: number } | undefined;
     const close = toNum((priceInfo?.lastPrice ?? priceInfo?.last ?? priceInfo?.close) as number | string | undefined);
     const open = toNum((priceInfo?.open ?? priceInfo?.openPrice) as number | string | undefined);
-    const high = toNum((intraDay?.max ?? priceInfo?.dayHigh) as number | string | undefined) || close;
-    const low = toNum((intraDay?.min ?? priceInfo?.dayLow) as number | string | undefined) || close;
+    const _high = toNum((intraDay?.max ?? priceInfo?.dayHigh) as number | string | undefined) || close;
+    const _low = toNum((intraDay?.min ?? priceInfo?.dayLow) as number | string | undefined) || close;
     const root = (data ?? quoteJson) as Record<string, unknown>;
     const rawVol =
       priceInfo?.totalTradedVolume ??

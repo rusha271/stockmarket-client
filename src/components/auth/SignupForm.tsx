@@ -295,7 +295,7 @@ export const SignupForm = ({ onSubmit, isLoading = false }: SignupFormProps) => 
           }}
         >
           <Typography variant="body2">
-            Already have an account? Use the <strong>"Login"</strong> tab to sign in.
+            Already have an account? Use the <strong>&quot;Login&quot;</strong> tab to sign in.
           </Typography>
         </Alert>
 
@@ -309,7 +309,7 @@ export const SignupForm = ({ onSubmit, isLoading = false }: SignupFormProps) => 
           }}
         >
           <Typography variant="body2">
-            <strong>Note:</strong> After creating your account, you'll receive both a verification email and temporary login credentials. This allows you to start using the dashboard immediately while your account is being verified.
+            <strong>Note:</strong> After creating your account, you&apos;ll receive both a verification email and temporary login credentials. This allows you to start using the dashboard immediately while your account is being verified.
           </Typography>
         </Alert>
       </Box>

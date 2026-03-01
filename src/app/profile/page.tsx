@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState /* , useEffect */ } from 'react';
 import { 
   Container, 
   Typography, 
@@ -13,7 +13,7 @@ import {
   TextField,
   Switch,
   FormControlLabel,
-  Divider,
+  // Divider,
   List,
   ListItem,
   ListItemText,
@@ -21,9 +21,9 @@ import {
   Chip,
   Alert,
   Snackbar,
-  Paper,
-  IconButton,
-  Tooltip
+  // Paper,
+  // IconButton,
+  // Tooltip
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -31,18 +31,18 @@ import {
   Phone as PhoneIcon,
   LocationOn as LocationIcon,
   Notifications as NotificationsIcon,
-  Security as SecurityIcon,
+  // Security as SecurityIcon,
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
   TrendingUp as TrendingUpIcon,
-  AccountBalance as AccountBalanceIcon,
+  // AccountBalance as AccountBalanceIcon,
   History as HistoryIcon,
   Star as StarIcon
 } from '@mui/icons-material';
 import { useTheme, useMediaQuery } from '@mui/material';
 import Layout from '@/components/layout/Layout';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+// import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NoSSR } from '@/components/common/NoSSR';
 import { useAuth } from '@/context/AuthContext';
 
@@ -133,8 +133,8 @@ const recentActivities = [
 
 export default function ProfilePage() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user } = useAuth();
+  const _isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user: _user } = useAuth();
   const [profile, setProfile] = useState<UserProfile>(mockProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);

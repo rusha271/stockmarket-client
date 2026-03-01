@@ -29,15 +29,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [isMobile, isClient]);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       <Sidebar open={sidebarOpen} onToggle={handleSidebarToggle} />
       <Box 
         sx={{ 
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column',
+          minWidth: 0,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          ml: { xs: 0, md: sidebarOpen ? 0 : 0 }, // No margin adjustment needed with proper drawer
           width: { xs: '100%', md: sidebarOpen ? 'calc(100% - 280px)' : 'calc(100% - 80px)' },
         }}
       >
@@ -46,10 +46,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           component="main" 
           sx={{ 
             flex: 1, 
-            p: { xs: 1.5, sm: 2, md: 3 },
+            minWidth: 0,
+            p: { xs: 1, sm: 1.5, md: 2, lg: 3 },
+            px: { xs: 1.5, sm: 2 },
             bgcolor: 'background.default',
             minHeight: { xs: 'calc(100vh - 56px)', md: 'calc(100vh - 70px)' },
             overflow: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           {children}
