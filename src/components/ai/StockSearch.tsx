@@ -34,7 +34,7 @@ export interface StockQuoteOHLC {
   time: string;
 }
 
-interface StockOption {
+export interface StockOption {
   symbol: string;
   name: string;
   price: number;
@@ -45,7 +45,7 @@ interface StockOption {
 }
 
 // Top 50 Nifty stocks only (NSE)
-const nifty50Stocks: StockOption[] = [
+export const nifty50Stocks: StockOption[] = [
   { symbol: 'ADANIPORTS', name: 'Adani Ports and Special Economic Zone Ltd', price: 0, change: 0, changePercent: 0, volume: 0, marketCap: '' },
   { symbol: 'ASIANPAINT', name: 'Asian Paints Ltd', price: 0, change: 0, changePercent: 0, volume: 0, marketCap: '' },
   { symbol: 'AXISBANK', name: 'Axis Bank Ltd', price: 0, change: 0, changePercent: 0, volume: 0, marketCap: '' },

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { getFiveMinSlots, getMsUntilNextFiveMinBoundary } from '@/utils/timeSlots';
 import {
   Box,
   Button,
@@ -78,6 +79,13 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
   const [progress, setProgress] = useState(0);
   const [predictionResult, setPredictionResult] = useState<PredictionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [autoRefreshSymbol, setAutoRefreshSymbol] = useState<string | null>(null);
+  const [nextAutoRunAt, setNextAutoRunAt] = useState<number | null>(null);
+  const [secondsUntilNextRun, setSecondsUntilNextRun] = useState<number | null>(null);
+  const [lastRunTime, setLastRunTime] = useState<string | null>(null);
+  const [timeSlots, setTimeSlots] = useState<{ currentSlot: string; predictionTargetSlot: string } | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const theme = useTheme();
 
   // Reset card when user selects a different stock
@@ -87,7 +95,47 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     setIsPredicting(false);
     setCurrentStep(0);
     setProgress(0);
+    setAutoRefreshEnabled(false);
+    setAutoRefreshSymbol(null);
+    setNextAutoRunAt(null);
+    setSecondsUntilNextRun(null);
+    setLastRunTime(null);
+    setTimeSlots(null);
   }, [stock?.symbol]);
+
+  useEffect(() => {
+    if (!autoRefreshEnabled || !autoRefreshSymbol || !nextAutoRunAt) {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const tick = () => {
+      const remainingMs = Math.max(0, nextAutoRunAt - Date.now());
+      setSecondsUntilNextRun(Math.ceil(remainingMs / 1000));
+    };
+
+    tick();
+    countdownIntervalRef.current = setInterval(tick, 1000);
+
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
+  }, [autoRefreshEnabled, autoRefreshSymbol, nextAutoRunAt]);
+
+  useEffect(() => {
+    if (!autoRefreshEnabled || !autoRefreshSymbol || !nextAutoRunAt) return;
+    if (isPredicting) return;
+
+    if (Date.now() >= nextAutoRunAt) {
+      void runPrediction(autoRefreshSymbol, true);
+    }
+  }, [autoRefreshEnabled, autoRefreshSymbol, isPredicting, nextAutoRunAt]);
 
   const _generateMockPrediction = (stockData: Record<string, unknown>): PredictionResult => {
     const currentPrice = Number(stockData.currentPrice) || 0;
@@ -128,13 +176,12 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     };
   };
 
-  const handlePredict = async () => {
-    if (!stock?.symbol) return;
+  async function runPrediction(symbol: string, isAutoRun = false) {
+    if (!symbol) return;
 
     setIsPredicting(true);
     setCurrentStep(0);
     setProgress(0);
-    setPredictionResult(null);
     setError(null);
 
     const stepsInterval = setInterval(() => {
@@ -146,10 +193,15 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     }, 900);
 
     try {
+      const slots = getFiveMinSlots();
       const res = await fetch('/api/ai-prediction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: stock.symbol }),
+        body: JSON.stringify({
+          symbol,
+          current_time_slot: slots.currentSlot,
+          prediction_target_time: slots.predictionTargetSlot,
+        }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -194,13 +246,45 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
       setProgress(100);
       setCurrentStep(analysisSteps.length - 1);
       setPredictionResult(result);
+      setTimeSlots({ currentSlot: slots.currentSlot, predictionTargetSlot: slots.predictionTargetSlot });
       onPredictionComplete?.(result);
+      setLastRunTime(
+        new Intl.DateTimeFormat('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }).format(new Date())
+      );
+
+      const nextRun = Date.now() + getMsUntilNextFiveMinBoundary();
+      if (!isAutoRun) {
+        setAutoRefreshEnabled(true);
+        setAutoRefreshSymbol(symbol);
+      }
+      if (autoRefreshEnabled || !isAutoRun) {
+        setNextAutoRunAt(nextRun);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate prediction. Please try again.');
     } finally {
       clearInterval(stepsInterval);
       setIsPredicting(false);
     }
+  }
+
+  const handlePredict = async () => {
+    const symbol = stock?.symbol ? String(stock.symbol) : '';
+    if (!symbol) return;
+    setPredictionResult(null);
+    await runPrediction(symbol, false);
+  };
+
+  const formatCountdown = (totalSeconds: number | null) => {
+    if (totalSeconds === null) return '--:--';
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
   const getDirectionColor = (direction: string) => {
@@ -357,6 +441,22 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
           </Fade>
         )}
 
+        {!isPredicting && autoRefreshEnabled && predictionResult && (
+          <Box sx={{ mb: 3, textAlign: 'center' }}>
+            {timeSlots && (
+              <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mb: 0.5 }}>
+                Current: {timeSlots.currentSlot} | Predicting: {timeSlots.predictionTargetSlot}
+              </Typography>
+            )}
+            <Typography variant="body2" color="text.secondary">
+              Auto refresh every 5 mins (aligned to 5-min boundaries) for {autoRefreshSymbol}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Last run at {lastRunTime ?? '--:--:--'} | Next run in {formatCountdown(secondsUntilNextRun)}
+            </Typography>
+          </Box>
+        )}
+
         {/* Error State */}
         {error && (
           <Fade in timeout={300}>
@@ -396,6 +496,11 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
                 }}
               >
                 <CardContent sx={{ p: { xs: 2.5, sm: 3, md: 4 } }}>
+                  {timeSlots && (
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 1.5 }}>
+                      Current: {timeSlots.currentSlot} | Predicting: {timeSlots.predictionTargetSlot}
+                    </Typography>
+                  )}
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 3 }}>
                     <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                       Real Time Analysis Result

@@ -51,6 +51,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const currentTimeSlot = typeof body?.current_time_slot === 'string' ? body.current_time_slot : null;
+    const predictionTargetTime = typeof body?.prediction_target_time === 'string' ? body.prediction_target_time : null;
+    const payload: Record<string, unknown> = { symbol };
+    if (currentTimeSlot) payload.current_time_slot = currentTimeSlot;
+    if (predictionTargetTime) payload.prediction_target_time = predictionTargetTime;
+
     const backendUrl = `${AI_BACKEND_URL.replace(/\/$/, '')}/predict`;
     const res = await fetch(backendUrl, {
       method: 'POST',
@@ -58,7 +64,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify({ symbol }),
+      body: JSON.stringify(payload),
     });
 
     const text = await res.text();

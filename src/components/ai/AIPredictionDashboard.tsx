@@ -1,11 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getFiveMinSlots, getMsUntilNextFiveMinBoundary, isMarketOpen } from '@/utils/timeSlots';
 import {
   Box,
   Container,
   Typography,
   Paper,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  ListItemIcon,
+  Checkbox,
+  Divider,
   alpha,
   Fade,
   Zoom,
@@ -13,9 +22,11 @@ import {
 import {
   Timeline as TimelineIcon,
   Search as SearchIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
-import { StockSearch } from './StockSearch';
+import { StockSearch, nifty50Stocks } from './StockSearch';
 import { StockDisplay } from './StockDisplay';
 import { AIPrediction } from './AIPrediction';
 
@@ -62,11 +73,33 @@ interface PredictionResult {
   };
 }
 
+interface ProfilingPredictionRow {
+  symbol: string;
+  currentPrice: number | null;
+  predictedPrice: number | null;
+}
+
+const PROFILE_REFRESH_MS = 5 * 60 * 1000;
+
 export const AIPredictionDashboard: React.FC = () => {
   const [selectedStock, setSelectedStock] = useState<StockOption | null>(null);
   const [stockQuote, setStockQuote] = useState<StockQuoteFromAPI | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [_predictionResult, setPredictionResult] = useState<PredictionResult | null>(null);
+  const [profileSelectedSymbols, setProfileSelectedSymbols] = useState<string[]>([]);
+  const [profileStagingSymbols, setProfileStagingSymbols] = useState<string[]>([]);
+  const [leftActiveSymbol, setLeftActiveSymbol] = useState<string | null>(null);
+  const [rightActiveSymbol, setRightActiveSymbol] = useState<string | null>(null);
+  const [dragSymbol, setDragSymbol] = useState<string | null>(null);
+  const [profileRows, setProfileRows] = useState<ProfilingPredictionRow[]>([]);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileLastRunAt, setProfileLastRunAt] = useState<string | null>(null);
+  const [profileNextRunIn, setProfileNextRunIn] = useState<number>(PROFILE_REFRESH_MS / 1000);
+  const [profileTimeSlots, setProfileTimeSlots] = useState<{
+    currentSlot: string;
+    predictionTargetSlot: string;
+  } | null>(null);
   const theme = useTheme();
 
   const handleStockSelect = (stock: StockOption | null) => {
@@ -97,6 +130,190 @@ export const AIPredictionDashboard: React.FC = () => {
 
   const handlePredictionComplete = (result: PredictionResult) => {
     setPredictionResult(result);
+  };
+
+  const availableProfileStocks = nifty50Stocks.filter(
+    (stock) => !profileStagingSymbols.includes(stock.symbol)
+  );
+  const selectedProfileStocks = nifty50Stocks.filter((stock) =>
+    profileStagingSymbols.includes(stock.symbol)
+  );
+
+  const moveLeftToRight = (symbol?: string) => {
+    const target = symbol ?? leftActiveSymbol;
+    if (!target || profileStagingSymbols.includes(target)) return;
+    setProfileStagingSymbols((prev) => [...prev, target]);
+    setLeftActiveSymbol(null);
+  };
+
+  const moveRightToLeft = (symbol?: string) => {
+    const target = symbol ?? rightActiveSymbol;
+    if (!target) return;
+    setProfileStagingSymbols((prev) => prev.filter((s) => s !== target));
+    setRightActiveSymbol(null);
+  };
+
+  const toggleProfileStock = (symbol: string) => {
+    setProfileStagingSymbols((prev) =>
+      prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setProfileStagingSymbols(checked ? nifty50Stocks.map((s) => s.symbol) : []);
+  };
+
+  const handleConfirmSelection = () => {
+    setProfileSelectedSymbols([...profileStagingSymbols]);
+    setLeftActiveSymbol(null);
+    setRightActiveSymbol(null);
+  };
+
+  const runProfilePrediction = async (symbols: string[]) => {
+    if (symbols.length === 0) {
+      setProfileRows([]);
+      setProfileError(null);
+      setProfileLastRunAt(null);
+      return;
+    }
+    if (!isMarketOpen()) {
+      setProfileError('Market is closed. NSE hours: 9:15–15:30 IST (Mon–Fri)');
+      return;
+    }
+
+    setProfileLoading(true);
+    setProfileError(null);
+    const slots = getFiveMinSlots();
+    setProfileTimeSlots({
+      currentSlot: slots.currentSlot,
+      predictionTargetSlot: slots.predictionTargetSlot,
+    });
+    try {
+      const res = await fetch('/api/ai-prediction/all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbols,
+          current_time_slot: slots.currentSlot,
+          prediction_target_time: slots.predictionTargetSlot,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg =
+          typeof data?.error === 'string'
+            ? data.error
+            : `Request failed (${res.status})`;
+        setProfileError(errMsg);
+        return;
+      }
+
+      const rawRows = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.predictions)
+          ? data.predictions
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+      const mapped = symbols.map((symbol) => {
+        const item = rawRows.find(
+          (r: unknown) =>
+            r &&
+            typeof r === 'object' &&
+            'symbol' in r &&
+            String((r as { symbol: unknown }).symbol).toUpperCase() === symbol
+        ) as { predictedPrice?: unknown; predicted_price?: unknown; currentPrice?: unknown } | undefined;
+
+        const predictedRaw = item?.predictedPrice ?? item?.predicted_price;
+        const predictedPrice =
+          typeof predictedRaw === 'number' && Number.isFinite(predictedRaw)
+            ? predictedRaw
+            : null;
+        const currentPriceRaw = item?.currentPrice;
+        const currentPrice =
+          typeof currentPriceRaw === 'number' && Number.isFinite(currentPriceRaw)
+            ? currentPriceRaw
+            : null;
+
+        return { symbol, currentPrice, predictedPrice };
+      });
+
+      setProfileRows(mapped);
+      setProfileLastRunAt(
+        new Intl.DateTimeFormat('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }).format(new Date())
+      );
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to fetch profiling prediction');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setProfileRows((prev) =>
+      prev.filter((row) => profileSelectedSymbols.includes(row.symbol))
+    );
+    if (isMarketOpen()) {
+      void runProfilePrediction(profileSelectedSymbols);
+    } else if (profileSelectedSymbols.length > 0) {
+      setProfileError('Market is closed. NSE hours: 9:15–15:30 IST (Mon–Fri)');
+    }
+  }, [profileSelectedSymbols]);
+
+  useEffect(() => {
+    if (profileSelectedSymbols.length === 0) {
+      setProfileNextRunIn(PROFILE_REFRESH_MS / 1000);
+      setProfileTimeSlots(null);
+      return;
+    }
+    if (!isMarketOpen()) {
+      setProfileNextRunIn(0);
+      setProfileTimeSlots(null);
+      return;
+    }
+
+    const slots = getFiveMinSlots();
+    setProfileTimeSlots({ currentSlot: slots.currentSlot, predictionTargetSlot: slots.predictionTargetSlot });
+
+    // Align to 5-min boundaries (2:40, 2:45, 2:50...)
+    const msUntilNext = getMsUntilNextFiveMinBoundary();
+    setProfileNextRunIn(Math.ceil(msUntilNext / 1000));
+
+    const countdown = setInterval(() => {
+      if (!isMarketOpen()) {
+        setProfileNextRunIn(0);
+        return;
+      }
+      setProfileNextRunIn((prev) => {
+        if (prev <= 1) {
+          void runProfilePrediction(profileSelectedSymbols);
+          return PROFILE_REFRESH_MS / 1000; // Next run in 5 mins
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdown);
+  }, [profileSelectedSymbols]);
+
+  const formatMmSs = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const getDirectionSymbol = (currentPrice: number | null, predictedPrice: number | null): string => {
+    if (currentPrice == null || predictedPrice == null || !Number.isFinite(currentPrice) || !Number.isFinite(predictedPrice)) return '';
+    const diff = predictedPrice - currentPrice;
+    if (Math.abs(diff) <= 1.5) return ' →';
+    return diff > 0 ? ' ↑' : ' ↓';
   };
 
   return (
@@ -207,6 +424,256 @@ export const AIPredictionDashboard: React.FC = () => {
                 quoteOHLC={stockQuote}
                 quoteLoading={quoteLoading}
               />
+            </Paper>
+          </Box>
+        </Fade>
+
+        <Fade in timeout={900}>
+          <Box sx={{ mb: 6 }}>
+            <Paper
+              sx={{
+                p: 3,
+                background:
+                  theme.palette.mode === 'light'
+                    ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)'
+                    : 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.8) 100%)',
+                backdropFilter: 'blur(20px)',
+                borderRadius: 4,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                Profiling (Nifty 50)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select stocks with checkboxes, arrow buttons, or drag-and-drop. Click Confirm to apply.
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+                <Paper
+                  variant="outlined"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const symbol = e.dataTransfer.getData('text/plain');
+                    if (symbol) moveRightToLeft(symbol);
+                    setDragSymbol(null);
+                  }}
+                  sx={{ flex: 1, minHeight: 280 }}
+                >
+                  <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Checkbox
+                      size="small"
+                      checked={profileStagingSymbols.length === nifty50Stocks.length}
+                      indeterminate={
+                        profileStagingSymbols.length > 0 &&
+                        profileStagingSymbols.length < nifty50Stocks.length
+                      }
+                      onChange={(_, checked) => handleSelectAll(checked)}
+                    />
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      Nifty 50 — Select All ({profileStagingSymbols.length}/50)
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <List dense sx={{ maxHeight: 320, overflowY: 'auto' }}>
+                    {nifty50Stocks.map((s) => {
+                      const isSelected = profileStagingSymbols.includes(s.symbol);
+                      return (
+                        <ListItem key={s.symbol} disablePadding dense>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            <Checkbox
+                              size="small"
+                              checked={isSelected}
+                              onChange={() => toggleProfileStock(s.symbol)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </ListItemIcon>
+                          <ListItemButton
+                            selected={leftActiveSymbol === s.symbol}
+                            onClick={() => {
+                              setLeftActiveSymbol(s.symbol);
+                              if (!isSelected) moveLeftToRight(s.symbol);
+                            }}
+                            draggable={isSelected}
+                            onDragStart={(e) => {
+                              if (isSelected) {
+                                e.dataTransfer.setData('text/plain', s.symbol);
+                                e.dataTransfer.effectAllowed = 'move';
+                                setDragSymbol(s.symbol);
+                              }
+                            }}
+                            onDragEnd={() => setDragSymbol(null)}
+                            sx={{
+                              flex: 1,
+                              cursor: isSelected ? 'grab' : 'pointer',
+                              '&:active': isSelected ? { cursor: 'grabbing' } : {},
+                            }}
+                          >
+                            <ListItemText primary={s.symbol} secondary={s.name} />
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </Paper>
+
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => moveLeftToRight()}
+                    disabled={!leftActiveSymbol}
+                    startIcon={<ArrowForwardIcon />}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => moveRightToLeft()}
+                    disabled={!rightActiveSymbol}
+                    startIcon={<ArrowBackIcon />}
+                  >
+                    Remove
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="small"
+                    onClick={handleConfirmSelection}
+                    disabled={profileStagingSymbols.length === 0}
+                    sx={{ mt: { md: 1 } }}
+                  >
+                    Confirm
+                  </Button>
+                </Box>
+
+                <Paper
+                  variant="outlined"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const symbol = e.dataTransfer.getData('text/plain');
+                    if (symbol && availableProfileStocks.some((s) => s.symbol === symbol)) {
+                      moveLeftToRight(symbol);
+                    }
+                    setDragSymbol(null);
+                  }}
+                  sx={{ flex: 1, minHeight: 280 }}
+                >
+                  <Box sx={{ px: 2, py: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      Selected ({selectedProfileStocks.length})
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <List dense sx={{ maxHeight: 320, overflowY: 'auto' }}>
+                    {selectedProfileStocks.length === 0 ? (
+                      <Box sx={{ px: 2, py: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Select stocks with checkboxes or drag from left.
+                        </Typography>
+                      </Box>
+                    ) : (
+                      selectedProfileStocks.map((s) => {
+                        const row = profileRows.find((r) => r.symbol === s.symbol);
+                        return (
+                          <ListItem key={s.symbol} disablePadding dense>
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                              <Checkbox
+                                size="small"
+                                checked
+                                onChange={() => toggleProfileStock(s.symbol)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </ListItemIcon>
+                            <ListItemButton
+                              selected={rightActiveSymbol === s.symbol}
+                              onClick={() => setRightActiveSymbol(s.symbol)}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', s.symbol);
+                                e.dataTransfer.effectAllowed = 'move';
+                                setDragSymbol(s.symbol);
+                              }}
+                              onDragEnd={() => setDragSymbol(null)}
+                              sx={{
+                                flex: 1,
+                                cursor: 'grab',
+                                transition: 'background-color 0.2s ease, transform 0.15s ease',
+                                '&:active': { cursor: 'grabbing', transform: 'scale(0.995)' },
+                              }}
+                            >
+                              <ListItemText
+                                primary={s.symbol}
+                                secondary={
+                                  `Current: ${
+                                    row?.currentPrice != null
+                                      ? `₹${row.currentPrice.toLocaleString('en-IN', {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })}`
+                                      : '--'
+                                  } | Predicted: ${
+                                    row?.predictedPrice != null
+                                      ? `₹${row.predictedPrice.toLocaleString('en-IN', {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })}${getDirectionSymbol(row.currentPrice, row.predictedPrice)}`
+                                      : '--'
+                                  }`
+                                }
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })
+                    )}
+                  </List>
+                </Paper>
+              </Box>
+
+              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                {profileTimeSlots && (
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Current: {profileTimeSlots.currentSlot} | Predicting: {profileTimeSlots.predictionTargetSlot}
+                  </Typography>
+                )}
+                {isMarketOpen() ? (
+                  <>
+                    <Typography variant="caption" color="text.secondary">
+                      Auto refresh: every 5 mins (aligned to 5-min boundaries)
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Next run in: {formatMmSs(profileNextRunIn)}
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography variant="caption" color="warning.main" fontWeight={600}>
+                    Market closed (NSE: 9:15–15:30 IST, Mon–Fri)
+                  </Typography>
+                )}
+                <Typography variant="caption" color="text.secondary">
+                  Last run: {profileLastRunAt ?? '--:--:--'}
+                </Typography>
+                {profileLoading && (
+                  <Typography variant="caption" color="primary.main">
+                    Fetching...
+                  </Typography>
+                )}
+                {profileError && (
+                  <Typography variant="caption" color="error.main">
+                    {profileError}
+                  </Typography>
+                )}
+                {dragSymbol && (
+                  <Typography variant="caption" color="text.secondary">
+                    Dragging: {dragSymbol}
+                  </Typography>
+                )}
+              </Box>
             </Paper>
           </Box>
         </Fade>
