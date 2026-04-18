@@ -36,7 +36,7 @@ import {
   Refresh as RefreshIcon,
   // Star as StarIcon
 } from '@mui/icons-material';
-import { useTheme, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material';
 
 // Lazy load heavy chart components with better loading
 const LineChart = lazy(() => import('@/components/charts/LineChart'));
@@ -233,7 +233,6 @@ export default function DashboardContent() {
   const [tabValue, setTabValue] = useState(0);
   const [favorites, setFavorites] = useState<string[]>(['TCS', 'INFY']);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const marketIndicesDisplay = useMemo(
     () =>
@@ -539,21 +538,24 @@ export default function DashboardContent() {
             <Tabs
               value={tabValue}
               onChange={handleTabChange}
-              variant={isMobile ? "scrollable" : "fullWidth"}
-              scrollButtons="auto"
-              allowScrollButtonsMobile
+              variant="fullWidth"
+              scrollButtons={false}
               sx={{
                 minHeight: { xs: 48, md: 64 },
+                '& .MuiTabs-flexContainer': {
+                  width: '100%',
+                },
                 '& .MuiTab-root': {
                   py: { xs: 1.5, md: 2 },
                   px: { xs: 2, md: 3 },
                   minHeight: { xs: 48, md: 64 },
                   fontWeight: 700,
-                  fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1.1rem' },
+                  fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1.1rem' },
                   textTransform: 'none',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  borderRadius: '12px 12px 0 0',
-                  margin: '0 4px',
+                  borderRadius: { xs: '10px 10px 0 0', md: '12px 12px 0 0' },
+                  margin: { xs: 0, md: '0 4px' },
+                  maxWidth: 'none',
                   '&:hover': {
                     backgroundColor: 'rgba(99, 102, 241, 0.08)',
                   },

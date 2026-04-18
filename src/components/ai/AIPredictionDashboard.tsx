@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { getFiveMinSlots, getMsUntilNextFiveMinBoundary, isMarketOpen } from '@/utils/timeSlots';
 import {
   Box,
@@ -18,12 +18,21 @@ import {
   alpha,
   Fade,
   Zoom,
+  Stack,
+  useMediaQuery,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Timeline as TimelineIcon,
-  Search as SearchIcon,
   ArrowForward as ArrowForwardIcon,
   ArrowBack as ArrowBackIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { StockSearch, nifty50Stocks } from './StockSearch';
@@ -80,6 +89,7 @@ interface ProfilingPredictionRow {
 }
 
 const PROFILE_REFRESH_MS = 5 * 60 * 1000;
+const AI_DISCLAIMER_KEY = 'ai_prediction_disclaimer_choice_v1';
 
 export const AIPredictionDashboard: React.FC = () => {
   const [selectedStock, setSelectedStock] = useState<StockOption | null>(null);
@@ -100,7 +110,13 @@ export const AIPredictionDashboard: React.FC = () => {
     currentSlot: string;
     predictionTargetSlot: string;
   } | null>(null);
+  const [mobileExpandedSection, setMobileExpandedSection] = useState<'available' | 'selected'>('available');
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [disclaimerDeclined, setDisclaimerDeclined] = useState(false);
+  const lastClosedRunSignatureRef = useRef<string | null>(null);
   const theme = useTheme();
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down('md'));
+  const totalProfileStocks = nifty50Stocks.length;
 
   const handleStockSelect = (stock: StockOption | null) => {
     setSelectedStock(stock);
@@ -154,9 +170,14 @@ export const AIPredictionDashboard: React.FC = () => {
   };
 
   const toggleProfileStock = (symbol: string) => {
-    setProfileStagingSymbols((prev) =>
-      prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]
-    );
+    setProfileStagingSymbols((prev) => {
+      if (prev.includes(symbol)) {
+        if (leftActiveSymbol === symbol) setLeftActiveSymbol(null);
+        if (rightActiveSymbol === symbol) setRightActiveSymbol(null);
+        return prev.filter((s) => s !== symbol);
+      }
+      return [...prev, symbol];
+    });
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -167,7 +188,44 @@ export const AIPredictionDashboard: React.FC = () => {
     setProfileSelectedSymbols([...profileStagingSymbols]);
     setLeftActiveSymbol(null);
     setRightActiveSymbol(null);
+    if (isMobileLayout) {
+      setMobileExpandedSection('selected');
+    }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedChoice = window.localStorage.getItem(AI_DISCLAIMER_KEY);
+    if (savedChoice === 'declined') {
+      setDisclaimerDeclined(true);
+      return;
+    }
+    if (savedChoice !== 'accepted') {
+      setDisclaimerOpen(true);
+    }
+  }, []);
+
+  const handleAcceptDisclaimer = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(AI_DISCLAIMER_KEY, 'accepted');
+    }
+    setDisclaimerDeclined(false);
+    setDisclaimerOpen(false);
+  };
+
+  const handleDeclineDisclaimer = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(AI_DISCLAIMER_KEY, 'declined');
+    }
+    setDisclaimerDeclined(true);
+    setDisclaimerOpen(false);
+  };
+
+  const profilingDirty = useMemo(() => {
+    const a = [...profileStagingSymbols].sort().join('\u0000');
+    const b = [...profileSelectedSymbols].sort().join('\u0000');
+    return a !== b;
+  }, [profileStagingSymbols, profileSelectedSymbols]);
 
   const runProfilePrediction = async (symbols: string[]) => {
     if (symbols.length === 0) {
@@ -176,11 +234,6 @@ export const AIPredictionDashboard: React.FC = () => {
       setProfileLastRunAt(null);
       return;
     }
-    if (!isMarketOpen()) {
-      setProfileError('Market is closed. NSE hours: 9:15–15:30 IST (Mon–Fri)');
-      return;
-    }
-
     setProfileLoading(true);
     setProfileError(null);
     const slots = getFiveMinSlots();
@@ -260,11 +313,21 @@ export const AIPredictionDashboard: React.FC = () => {
     setProfileRows((prev) =>
       prev.filter((row) => profileSelectedSymbols.includes(row.symbol))
     );
-    if (isMarketOpen()) {
-      void runProfilePrediction(profileSelectedSymbols);
-    } else if (profileSelectedSymbols.length > 0) {
-      setProfileError('Market is closed. NSE hours: 9:15–15:30 IST (Mon–Fri)');
+    if (profileSelectedSymbols.length === 0) {
+      lastClosedRunSignatureRef.current = null;
+      return;
     }
+
+    if (isMarketOpen()) {
+      lastClosedRunSignatureRef.current = null;
+      void runProfilePrediction(profileSelectedSymbols);
+      return;
+    }
+
+    const signature = [...profileSelectedSymbols].sort().join('|');
+    if (lastClosedRunSignatureRef.current === signature) return;
+    lastClosedRunSignatureRef.current = signature;
+    void runProfilePrediction(profileSelectedSymbols);
   }, [profileSelectedSymbols]);
 
   useEffect(() => {
@@ -321,7 +384,7 @@ export const AIPredictionDashboard: React.FC = () => {
       sx={{
         minHeight: '100vh',
         background: theme.palette.background.gradient,
-        p: { xs: 2, sm: 3, md: 4 },
+        p: { xs: 1.5, sm: 2, md: 4 },
         position: 'relative',
         '&::before': {
           content: '""',
@@ -337,16 +400,57 @@ export const AIPredictionDashboard: React.FC = () => {
         }
       }}
     >
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+        {disclaimerDeclined && (
+          <Paper
+            sx={{
+              p: 2,
+              mb: 2,
+              borderRadius: 2,
+              border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
+              backgroundColor: alpha(theme.palette.warning.main, 0.08),
+            }}
+          >
+            <Typography variant="body2" color="text.primary" sx={{ mb: 1 }}>
+              AI predictions are informational and may be inaccurate. Review risk before trading.
+            </Typography>
+            <Button size="small" variant="outlined" onClick={() => setDisclaimerOpen(true)}>
+              Review disclaimer
+            </Button>
+          </Paper>
+        )}
+
+        <Dialog open={disclaimerOpen} onClose={handleDeclineDisclaimer} maxWidth="sm" fullWidth>
+          <DialogTitle>AI Prediction Disclaimer</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              This dashboard provides AI-based predictions for educational and informational use only.
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              It is not financial advice. Markets are risky and outcomes are not guaranteed. Please verify
+              with your own analysis before making investment decisions.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleDeclineDisclaimer} color="inherit">
+              Decline
+            </Button>
+            <Button onClick={handleAcceptDisclaimer} variant="contained">
+              Accept
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Header */}
         <Fade in timeout={600}>
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4, md: 6 } }}>
             <Box
               sx={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 2,
-                p: 3,
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1.5, sm: 2 },
+                p: { xs: 2, sm: 3 },
                 borderRadius: 4,
                 background: theme.palette.mode === 'light' 
                   ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)'
@@ -359,7 +463,7 @@ export const AIPredictionDashboard: React.FC = () => {
             >
               <Box
                 sx={{
-                  p: 2,
+                  p: { xs: 1.5, sm: 2 },
                   borderRadius: 3,
                   background: theme.palette.primary.gradient,
                   display: 'flex',
@@ -370,11 +474,13 @@ export const AIPredictionDashboard: React.FC = () => {
               >
                 <TimelineIcon sx={{ fontSize: '2rem', color: 'white' }} />
               </Box>
-              <Box sx={{ textAlign: 'left' }}>
+              <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
                 <Typography 
                   variant="h3" 
                   fontWeight={900}
                   sx={{
+                    fontSize: { xs: '2rem', sm: '2.4rem', md: '3rem' },
+                    lineHeight: 1.1,
                     background: theme.palette.primary.gradient,
                     backgroundClip: 'text',
                     WebkitBackgroundClip: 'text',
@@ -384,13 +490,21 @@ export const AIPredictionDashboard: React.FC = () => {
                 >
                   Real Time Analysis
                 </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
+                <Typography
+                  variant="h6"
+                  color="text.secondary"
+                  sx={{ fontWeight: 500, fontSize: { xs: '1.05rem', sm: '1.2rem' } }}
+                >
                   Live market analysis and technical insights
                 </Typography>
               </Box>
             </Box>
             
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ maxWidth: 600, mx: 'auto', px: { xs: 1, sm: 0 }, fontSize: { xs: '1rem', sm: '1.05rem' } }}
+            >
               Search for any stock symbol or company name to get real-time analysis, 
               technical indicators, and market insights.
             </Typography>
@@ -398,7 +512,7 @@ export const AIPredictionDashboard: React.FC = () => {
         </Fade>
 
         {/* Search Section */}
-        <Fade in timeout={800}>
+        {/* <Fade in timeout={800}>
           <Box sx={{ mb: 6 }}>
             <Paper
               sx={{
@@ -426,13 +540,13 @@ export const AIPredictionDashboard: React.FC = () => {
               />
             </Paper>
           </Box>
-        </Fade>
+        </Fade> */}
 
         <Fade in timeout={900}>
           <Box sx={{ mb: 6 }}>
             <Paper
               sx={{
-                p: 3,
+                p: { xs: 2, sm: 3 },
                 background:
                   theme.palette.mode === 'light'
                     ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)'
@@ -443,199 +557,383 @@ export const AIPredictionDashboard: React.FC = () => {
                 boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
               }}
             >
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 1, fontSize: { xs: '1.05rem', sm: '1.25rem' } }}>
                 Profiling (Nifty 50)
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Select stocks with checkboxes, arrow buttons, or drag-and-drop. Click Confirm to apply.
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 2, lineHeight: 1.45, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+              >
+                Use checkboxes to select or deselect stocks, then tap Confirm to apply your changes.
               </Typography>
 
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-                <Paper
-                  variant="outlined"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const symbol = e.dataTransfer.getData('text/plain');
-                    if (symbol) moveRightToLeft(symbol);
-                    setDragSymbol(null);
-                  }}
-                  sx={{ flex: 1, minHeight: 280 }}
-                >
-                  <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Checkbox
-                      size="small"
-                      checked={profileStagingSymbols.length === nifty50Stocks.length}
-                      indeterminate={
-                        profileStagingSymbols.length > 0 &&
-                        profileStagingSymbols.length < nifty50Stocks.length
+                <Box sx={{ flex: 1 }}>
+                  {isMobileLayout ? (
+                    <Accordion
+                      expanded={mobileExpandedSection === 'available'}
+                      onChange={(_, expanded) =>
+                        setMobileExpandedSection(expanded ? 'available' : 'selected')
                       }
-                      onChange={(_, checked) => handleSelectAll(checked)}
-                    />
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      Nifty 50 — Select All ({profileStagingSymbols.length}/50)
-                    </Typography>
-                  </Box>
-                  <Divider />
-                  <List dense sx={{ maxHeight: 320, overflowY: 'auto' }}>
-                    {nifty50Stocks.map((s) => {
-                      const isSelected = profileStagingSymbols.includes(s.symbol);
-                      return (
-                        <ListItem key={s.symbol} disablePadding dense>
-                          <ListItemIcon sx={{ minWidth: 40 }}>
-                            <Checkbox
-                              size="small"
-                              checked={isSelected}
-                              onChange={() => toggleProfileStock(s.symbol)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </ListItemIcon>
-                          <ListItemButton
-                            selected={leftActiveSymbol === s.symbol}
-                            onClick={() => {
-                              setLeftActiveSymbol(s.symbol);
-                              if (!isSelected) moveLeftToRight(s.symbol);
-                            }}
-                            draggable={isSelected}
-                            onDragStart={(e) => {
-                              if (isSelected) {
-                                e.dataTransfer.setData('text/plain', s.symbol);
-                                e.dataTransfer.effectAllowed = 'move';
-                                setDragSymbol(s.symbol);
-                              }
-                            }}
-                            onDragEnd={() => setDragSymbol(null)}
-                            sx={{
-                              flex: 1,
-                              cursor: isSelected ? 'grab' : 'pointer',
-                              '&:active': isSelected ? { cursor: 'grabbing' } : {},
-                            }}
-                          >
-                            <ListItemText primary={s.symbol} secondary={s.name} />
-                          </ListItemButton>
-                        </ListItem>
-                      );
-                    })}
-                  </List>
-                </Paper>
+                      disableGutters
+                      sx={{ borderRadius: 2, overflow: 'hidden' }}
+                    >
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Checkbox
+                            size="small"
+                            checked={profileStagingSymbols.length === nifty50Stocks.length}
+                            indeterminate={
+                              profileStagingSymbols.length > 0 &&
+                              profileStagingSymbols.length < nifty50Stocks.length
+                            }
+                            onChange={(_, checked) => handleSelectAll(checked)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <Typography variant="subtitle2" fontWeight={700}>
+                            Nifty 50 ({profileStagingSymbols.length}/{totalProfileStocks})
+                          </Typography>
+                        </Box>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ p: 0 }}>
+                        <List dense sx={{ maxHeight: 280, overflowY: 'auto' }}>
+                          {nifty50Stocks.map((s) => {
+                            const isSelected = profileStagingSymbols.includes(s.symbol);
+                            return (
+                              <ListItem key={s.symbol} disablePadding dense>
+                                <ListItemIcon sx={{ minWidth: 46 }}>
+                                  <Checkbox
+                                    size="medium"
+                                    checked={isSelected}
+                                    onChange={() => toggleProfileStock(s.symbol)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </ListItemIcon>
+                                <ListItemButton
+                                  selected={leftActiveSymbol === s.symbol}
+                                  onClick={() => setLeftActiveSymbol(s.symbol)}
+                                  sx={{ minHeight: 52 }}
+                                >
+                                  <ListItemText primary={s.symbol} secondary={s.name} />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                        </List>
+                      </AccordionDetails>
+                    </Accordion>
+                  ) : (
+                    <Paper
+                      variant="outlined"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const symbol = e.dataTransfer.getData('text/plain');
+                        if (symbol) moveRightToLeft(symbol);
+                        setDragSymbol(null);
+                      }}
+                      sx={{ minHeight: { xs: 220, sm: 280 } }}
+                    >
+                      <Box sx={{ px: { xs: 1.25, sm: 2 }, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox
+                          size={isMobileLayout ? 'medium' : 'small'}
+                          checked={profileStagingSymbols.length === nifty50Stocks.length}
+                          indeterminate={
+                            profileStagingSymbols.length > 0 &&
+                            profileStagingSymbols.length < nifty50Stocks.length
+                          }
+                          onChange={(_, checked) => handleSelectAll(checked)}
+                        />
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                          Nifty 50 — Select All ({profileStagingSymbols.length}/{totalProfileStocks})
+                        </Typography>
+                      </Box>
+                      <Divider />
+                      <List dense sx={{ maxHeight: { xs: 250, sm: 320 }, overflowY: 'auto' }}>
+                        {nifty50Stocks.map((s) => {
+                          const isSelected = profileStagingSymbols.includes(s.symbol);
+                          return (
+                            <ListItem key={s.symbol} disablePadding dense>
+                              <ListItemIcon sx={{ minWidth: { xs: 48, sm: 40 } }}>
+                                <Checkbox
+                                  size={isMobileLayout ? 'medium' : 'small'}
+                                  checked={isSelected}
+                                  onChange={() => toggleProfileStock(s.symbol)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </ListItemIcon>
+                              <ListItemButton
+                                selected={leftActiveSymbol === s.symbol}
+                                onClick={() => {
+                                  setLeftActiveSymbol(s.symbol);
+                                }}
+                                draggable={isSelected}
+                                onDragStart={(e) => {
+                                  if (isSelected) {
+                                    e.dataTransfer.setData('text/plain', s.symbol);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    setDragSymbol(s.symbol);
+                                  }
+                                }}
+                                onDragEnd={() => setDragSymbol(null)}
+                                sx={{
+                                  flex: 1,
+                                  minHeight: { xs: 52, sm: 48 },
+                                  py: { xs: 0.75, sm: 0.5 },
+                                  cursor: isSelected ? 'grab' : 'pointer',
+                                  '&:active': isSelected ? { cursor: 'grabbing' } : {},
+                                }}
+                              >
+                                <ListItemText primary={s.symbol} secondary={s.name} />
+                              </ListItemButton>
+                            </ListItem>
+                          );
+                        })}
+                      </List>
+                    </Paper>
+                  )}
+                </Box>
 
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: { xs: 1, md: 1 },
+                    alignItems: 'stretch',
+                    justifyContent: 'center',
+                    width: { xs: '100%', md: 'auto' },
+                    minWidth: { md: 120 },
+                  }}
+                >
                   <Button
                     variant="contained"
-                    size="small"
+                    size={isMobileLayout ? 'medium' : 'small'}
                     onClick={() => moveLeftToRight()}
-                    disabled={!leftActiveSymbol}
+                    disabled
                     startIcon={<ArrowForwardIcon />}
+                    fullWidth={isMobileLayout}
+                    sx={{ minHeight: { xs: 48, md: 'auto' } }}
                   >
                     Add
                   </Button>
                   <Button
                     variant="outlined"
-                    size="small"
+                    size={isMobileLayout ? 'medium' : 'small'}
                     onClick={() => moveRightToLeft()}
-                    disabled={!rightActiveSymbol}
+                    disabled
                     startIcon={<ArrowBackIcon />}
+                    fullWidth={isMobileLayout}
+                    sx={{ minHeight: { xs: 48, md: 'auto' } }}
                   >
                     Remove
                   </Button>
                   <Button
                     variant="contained"
                     color="success"
-                    size="small"
+                    size={isMobileLayout ? 'medium' : 'small'}
                     onClick={handleConfirmSelection}
-                    disabled={profileStagingSymbols.length === 0}
-                    sx={{ mt: { md: 1 } }}
+                    disabled={!profilingDirty}
+                    fullWidth={isMobileLayout}
+                    sx={{ minHeight: { xs: 48, md: 'auto' }, mt: { md: 1 } }}
                   >
                     Confirm
                   </Button>
+                  {isMobileLayout && (
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => setMobileExpandedSection('available')}
+                    >
+                      Select more stocks
+                    </Button>
+                  )}
                 </Box>
 
-                <Paper
-                  variant="outlined"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const symbol = e.dataTransfer.getData('text/plain');
-                    if (symbol && availableProfileStocks.some((s) => s.symbol === symbol)) {
-                      moveLeftToRight(symbol);
-                    }
-                    setDragSymbol(null);
-                  }}
-                  sx={{ flex: 1, minHeight: 280 }}
-                >
-                  <Box sx={{ px: 2, py: 1.5 }}>
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      Selected ({selectedProfileStocks.length})
-                    </Typography>
-                  </Box>
-                  <Divider />
-                  <List dense sx={{ maxHeight: 320, overflowY: 'auto' }}>
-                    {selectedProfileStocks.length === 0 ? (
-                      <Box sx={{ px: 2, py: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Select stocks with checkboxes or drag from left.
+                <Box sx={{ flex: 1 }}>
+                  {isMobileLayout ? (
+                    <Accordion
+                      expanded={mobileExpandedSection === 'selected'}
+                      onChange={(_, expanded) =>
+                        setMobileExpandedSection(expanded ? 'selected' : 'available')
+                      }
+                      disableGutters
+                      sx={{ borderRadius: 2, overflow: 'hidden' }}
+                    >
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography variant="subtitle2" fontWeight={700}>
+                          Selected ({selectedProfileStocks.length})
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ p: 0 }}>
+                        <List dense sx={{ maxHeight: 280, overflowY: 'auto' }}>
+                          {selectedProfileStocks.length === 0 ? (
+                            <Box sx={{ px: 2, py: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Select stocks with checkboxes from Nifty 50.
+                              </Typography>
+                            </Box>
+                          ) : (
+                            selectedProfileStocks.map((s) => {
+                              const row = profileRows.find((r) => r.symbol === s.symbol);
+                              return (
+                                <ListItem key={s.symbol} disablePadding dense>
+                                  <ListItemIcon sx={{ minWidth: 46, alignSelf: 'flex-start', mt: 0.5 }}>
+                                    <Checkbox
+                                      size="medium"
+                                      checked
+                                      onChange={() => toggleProfileStock(s.symbol)}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </ListItemIcon>
+                                  <ListItemButton
+                                    selected={rightActiveSymbol === s.symbol}
+                                    onClick={() => setRightActiveSymbol(s.symbol)}
+                                    sx={{ alignItems: 'flex-start', minHeight: 56, py: 1 }}
+                                  >
+                                    <ListItemText
+                                      primary={s.symbol}
+                                      primaryTypographyProps={{ sx: { fontWeight: 700 } }}
+                                      secondaryTypographyProps={{ component: 'div' }}
+                                      secondary={
+                                        <Stack spacing={0.35} sx={{ mt: 0.25 }}>
+                                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: '0.78rem' }}>
+                                            Current:{' '}
+                                            {row?.currentPrice != null
+                                              ? `₹${row.currentPrice.toLocaleString('en-IN', {
+                                                  minimumFractionDigits: 2,
+                                                  maximumFractionDigits: 2,
+                                                })}`
+                                              : '--'}
+                                          </Typography>
+                                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: '0.78rem' }}>
+                                            Predicted:{' '}
+                                            {row?.predictedPrice != null
+                                              ? `₹${row.predictedPrice.toLocaleString('en-IN', {
+                                                  minimumFractionDigits: 2,
+                                                  maximumFractionDigits: 2,
+                                                })}${getDirectionSymbol(row.currentPrice, row.predictedPrice)}`
+                                              : '--'}
+                                          </Typography>
+                                        </Stack>
+                                      }
+                                    />
+                                  </ListItemButton>
+                                </ListItem>
+                              );
+                            })
+                          )}
+                        </List>
+                      </AccordionDetails>
+                    </Accordion>
+                  ) : (
+                    <Paper
+                      variant="outlined"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const symbol = e.dataTransfer.getData('text/plain');
+                        if (symbol && availableProfileStocks.some((s) => s.symbol === symbol)) {
+                          moveLeftToRight(symbol);
+                        }
+                        setDragSymbol(null);
+                      }}
+                      sx={{ minHeight: { xs: 220, sm: 280 } }}
+                    >
+                      <Box sx={{ px: { xs: 1.25, sm: 2 }, py: 1.5 }}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                          Selected ({selectedProfileStocks.length})
                         </Typography>
                       </Box>
-                    ) : (
-                      selectedProfileStocks.map((s) => {
-                        const row = profileRows.find((r) => r.symbol === s.symbol);
-                        return (
-                          <ListItem key={s.symbol} disablePadding dense>
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                              <Checkbox
-                                size="small"
-                                checked
-                                onChange={() => toggleProfileStock(s.symbol)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </ListItemIcon>
-                            <ListItemButton
-                              selected={rightActiveSymbol === s.symbol}
-                              onClick={() => setRightActiveSymbol(s.symbol)}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData('text/plain', s.symbol);
-                                e.dataTransfer.effectAllowed = 'move';
-                                setDragSymbol(s.symbol);
-                              }}
-                              onDragEnd={() => setDragSymbol(null)}
-                              sx={{
-                                flex: 1,
-                                cursor: 'grab',
-                                transition: 'background-color 0.2s ease, transform 0.15s ease',
-                                '&:active': { cursor: 'grabbing', transform: 'scale(0.995)' },
-                              }}
-                            >
-                              <ListItemText
-                                primary={s.symbol}
-                                secondary={
-                                  `Current: ${
-                                    row?.currentPrice != null
-                                      ? `₹${row.currentPrice.toLocaleString('en-IN', {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        })}`
-                                      : '--'
-                                  } | Predicted: ${
-                                    row?.predictedPrice != null
-                                      ? `₹${row.predictedPrice.toLocaleString('en-IN', {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        })}${getDirectionSymbol(row.currentPrice, row.predictedPrice)}`
-                                      : '--'
-                                  }`
-                                }
-                              />
-                            </ListItemButton>
-                          </ListItem>
-                        );
-                      })
-                    )}
-                  </List>
-                </Paper>
+                      <Divider />
+                      <List dense sx={{ maxHeight: { xs: 250, sm: 320 }, overflowY: 'auto' }}>
+                        {selectedProfileStocks.length === 0 ? (
+                          <Box sx={{ px: 2, py: 2 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              Select stocks with checkboxes or drag from left.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          selectedProfileStocks.map((s) => {
+                            const row = profileRows.find((r) => r.symbol === s.symbol);
+                            return (
+                              <ListItem key={s.symbol} disablePadding dense>
+                                <ListItemIcon sx={{ minWidth: { xs: 48, sm: 40 }, alignSelf: 'flex-start', mt: 0.5 }}>
+                                  <Checkbox
+                                    size={isMobileLayout ? 'medium' : 'small'}
+                                    checked
+                                    onChange={() => toggleProfileStock(s.symbol)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </ListItemIcon>
+                                <ListItemButton
+                                  selected={rightActiveSymbol === s.symbol}
+                                  onClick={() => setRightActiveSymbol(s.symbol)}
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData('text/plain', s.symbol);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    setDragSymbol(s.symbol);
+                                  }}
+                                  onDragEnd={() => setDragSymbol(null)}
+                                  sx={{
+                                    flex: 1,
+                                    alignItems: 'flex-start',
+                                    minHeight: { xs: 56, sm: 48 },
+                                    py: { xs: 1, sm: 0.5 },
+                                    cursor: 'grab',
+                                    transition: 'background-color 0.2s ease, transform 0.15s ease',
+                                    '&:active': { cursor: 'grabbing', transform: 'scale(0.995)' },
+                                  }}
+                                >
+                                  <ListItemText
+                                    primary={s.symbol}
+                                    primaryTypographyProps={{ sx: { fontWeight: 700 } }}
+                                    secondaryTypographyProps={{ component: 'div' }}
+                                    secondary={
+                                      <Stack spacing={0.35} sx={{ mt: 0.25 }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: { xs: '0.78rem', sm: '0.875rem' } }}>
+                                          Current:{' '}
+                                          {row?.currentPrice != null
+                                            ? `₹${row.currentPrice.toLocaleString('en-IN', {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                              })}`
+                                            : '--'}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: { xs: '0.78rem', sm: '0.875rem' } }}>
+                                          Predicted:{' '}
+                                          {row?.predictedPrice != null
+                                            ? `₹${row.predictedPrice.toLocaleString('en-IN', {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                              })}${getDirectionSymbol(row.currentPrice, row.predictedPrice)}`
+                                            : '--'}
+                                        </Typography>
+                                      </Stack>
+                                    }
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })
+                        )}
+                      </List>
+                    </Paper>
+                  )}
+                </Box>
               </Box>
 
-              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+              <Box
+                sx={{
+                  mt: 2,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  flexWrap: 'wrap',
+                  gap: { xs: 1, sm: 2 },
+                  alignItems: { xs: 'stretch', sm: 'center' },
+                }}
+              >
                 {profileTimeSlots && (
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>
                     Current: {profileTimeSlots.currentSlot} | Predicting: {profileTimeSlots.predictionTargetSlot}

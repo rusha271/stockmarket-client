@@ -96,7 +96,6 @@ export const nifty50Stocks: StockOption[] = [
   { symbol: 'PIDILITIND', name: 'Pidilite Industries Ltd', price: 0, change: 0, changePercent: 0, volume: 0, marketCap: '' },
   { symbol: 'SHREECEM', name: 'Shree Cement Ltd', price: 0, change: 0, changePercent: 0, volume: 0, marketCap: '' },
   { symbol: 'UPL', name: 'UPL Ltd', price: 0, change: 0, changePercent: 0, volume: 0, marketCap: '' },
-  { symbol: 'IOC', name: 'Indian Oil Corporation Ltd', price: 0, change: 0, changePercent: 0, volume: 0, marketCap: '' },
 ];
 
 interface StockSearchProps {

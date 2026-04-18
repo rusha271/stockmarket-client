@@ -1,16 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { isMarketOpen } from '@/utils/timeSlots';
 
 const MARKET_INDICES_API = '/api/market-indices';
 const POLL_INTERVAL_MS = 5000;
-const IST = 'Asia/Kolkata';
-
-function isWeekendInIST(): boolean {
-  const formatter = new Intl.DateTimeFormat('en-US', { timeZone: IST, weekday: 'short' });
-  const day = formatter.format(new Date());
-  return day === 'Sat' || day === 'Sun';
-}
 
 export interface MarketIndex {
   symbol: string;
@@ -110,13 +104,18 @@ export function useMarketIndices(): {
 
   useEffect(() => {
     mountedRef.current = true;
-    setLoading(true);
-    fetchIndices().finally(() => {
-      if (mountedRef.current) setLoading(false);
-    });
+    if (isMarketOpen()) {
+      setLoading(true);
+      fetchIndices().finally(() => {
+        if (mountedRef.current) setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
 
-    if (!isWeekendInIST()) {
+    if (isMarketOpen()) {
       intervalRef.current = setInterval(() => {
+        if (!isMarketOpen()) return;
         if (typeof document !== 'undefined' && document.hidden) return;
         pollAbortRef.current = new AbortController();
         fetchIndices(pollAbortRef.current.signal);
