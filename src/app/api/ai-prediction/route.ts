@@ -1,11 +1,13 @@
+import { isUseMock } from '@/lib/featureFlags';
+import { getAiBackendBaseUrl } from '@/lib/resolveAiBackendUrl';
+import { mockAiPrediction } from '@/mocks/apiFixtures';
+
 /**
  * Proxies AI prediction requests to the FastAPI (Python) backend.
  * The browser only calls this route (same origin), so there are no CORS issues.
  * POST body: { symbol: string } e.g. { symbol: "ICICIBANK" }
- * Set AI_BACKEND_URL in .env.local to match your Uvicorn server (e.g. http://127.0.0.1:8000).
+ * Set AI_BACKEND_URL or NEXT_PUBLIC_API_URL in .env / Amplify to match your API.
  */
-
-const AI_BACKEND_URL = process.env.AI_BACKEND_URL || 'http://127.0.0.1:8000';
 
 /** Convert FastAPI error detail (string or array of { type, loc, msg, input }) to a single string */
 function detailToMessage(detail: unknown): string {
@@ -57,7 +59,14 @@ export async function POST(request: Request) {
     if (currentTimeSlot) payload.current_time_slot = currentTimeSlot;
     if (predictionTargetTime) payload.prediction_target_time = predictionTargetTime;
 
-    const backendUrl = `${AI_BACKEND_URL.replace(/\/$/, '')}/predict`;
+    if (isUseMock()) {
+      return new Response(JSON.stringify(mockAiPrediction(symbol)), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const backendUrl = `${getAiBackendBaseUrl()}/predict`;
     const res = await fetch(backendUrl, {
       method: 'POST',
       headers: {

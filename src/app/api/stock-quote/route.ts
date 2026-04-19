@@ -1,3 +1,6 @@
+import { isUseMock } from '@/lib/featureFlags';
+import { mockStockQuote } from '@/mocks/apiFixtures';
+
 const NSE_ORIGIN = 'https://www.nseindia.com';
 
 const BROWSER_HEADERS = {
@@ -95,6 +98,10 @@ export async function GET(request: Request) {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  if (isUseMock()) {
+    return Response.json(mockStockQuote(symbol));
   }
 
   const cookieJar: string[] = [];

@@ -1,4 +1,7 @@
-const AI_BACKEND_URL = process.env.AI_BACKEND_URL || 'http://127.0.0.1:8000';
+import { isUseMock } from '@/lib/featureFlags';
+import { getAiBackendBaseUrl } from '@/lib/resolveAiBackendUrl';
+import { mockPredictAllRows } from '@/mocks/apiFixtures';
+
 const QUOTE_BATCH_SIZE = 5;
 
 interface PredictionRow {
@@ -53,6 +56,14 @@ export async function POST(request: Request) {
       );
     }
 
+    if (isUseMock()) {
+      const predictions = mockPredictAllRows(symbols);
+      return new Response(JSON.stringify({ predictions }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const currentTimeSlot = typeof body?.current_time_slot === 'string' ? body.current_time_slot : null;
     const predictionTargetTime = typeof body?.prediction_target_time === 'string' ? body.prediction_target_time : null;
     const payload: Record<string, unknown> = { symbols };
@@ -69,7 +80,7 @@ export async function POST(request: Request) {
       new URL(request.url).origin;
 
     const [backendRes, quotesMap] = await Promise.all([
-      fetch(`${AI_BACKEND_URL.replace(/\/$/, '')}/predict/all`, {
+      fetch(`${getAiBackendBaseUrl()}/predict/all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(payload),

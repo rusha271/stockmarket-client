@@ -1,3 +1,6 @@
+import { isUseMock } from '@/lib/featureFlags';
+import { mockMarketIndicesJson } from '@/mocks/apiFixtures';
+
 const NSE_ORIGIN = 'https://www.nseindia.com';
 const NSE_ALL_INDICES_URL = `${NSE_ORIGIN}/api/allIndices`;
 
@@ -66,6 +69,10 @@ function parseNseIndices(body: unknown): { symbol: string; regularMarketPrice: n
 }
 
 export async function GET() {
+  if (isUseMock()) {
+    return Response.json(mockMarketIndicesJson());
+  }
+
   const cookieJar: string[] = [];
 
   try {
