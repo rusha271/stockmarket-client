@@ -35,7 +35,7 @@ import {
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
-import { StockSearch, nifty50Stocks } from './StockSearch';
+import { nifty50Stocks } from './StockSearch';
 import { StockDisplay } from './StockDisplay';
 import { AIPrediction } from './AIPrediction';
 
@@ -118,7 +118,7 @@ export const AIPredictionDashboard: React.FC = () => {
   const isMobileLayout = useMediaQuery(theme.breakpoints.down('md'));
   const totalProfileStocks = nifty50Stocks.length;
 
-  const handleStockSelect = (stock: StockOption | null) => {
+  const _handleStockSelect = (stock: StockOption | null) => {
     setSelectedStock(stock);
     setStockQuote(null);
     setPredictionResult(null);
@@ -533,7 +533,7 @@ export const AIPredictionDashboard: React.FC = () => {
                 </Typography>
               </Box>
               <StockSearch 
-                onStockSelect={handleStockSelect}
+                onStockSelect={_handleStockSelect}
                 selectedStock={selectedStock}
                 quoteOHLC={stockQuote}
                 quoteLoading={quoteLoading}
