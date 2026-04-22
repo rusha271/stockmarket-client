@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getFiveMinSlots, getMsUntilNextFiveMinBoundary } from '@/utils/timeSlots';
 import {
   Box,
@@ -63,6 +63,10 @@ interface AIPredictionProps {
   /** Optional current price (e.g. quote.close) for frontend direction calculation. If not provided, uses stock.price / stock.currentPrice. */
   currentPrice?: number;
   onPredictionComplete?: (result: PredictionResult) => void;
+}
+
+function isRiskLevel(value: unknown): value is PredictionResult['riskLevel'] {
+  return value === 'low' || value === 'medium' || value === 'high';
 }
 
 const analysisSteps = [
@@ -131,6 +135,86 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     };
   }, [autoRefreshEnabled, autoRefreshSymbol, nextAutoRunAt]);
 
+  const runPrediction = useCallback(async (symbol: string, isAutoRun = false) => {
+    if (!symbol) return;
+
+    setIsPredicting(true);
+    setCurrentStep(0);
+    setProgress(0);
+    setError(null);
+    setHasRequestedPrediction(true);
+
+    const stepsInterval = setInterval(() => {
+      setCurrentStep((s) => {
+        const next = Math.min(s + 1, analysisSteps.length - 1);
+        setProgress((next / analysisSteps.length) * 100);
+        return next;
+      });
+    }, 900);
+
+    try {
+      const slots = getFiveMinSlots();
+      const data = await predictSingleStock({
+        symbol,
+        current_time_slot: slots.currentSlot,
+        prediction_target_time: slots.predictionTargetSlot,
+      });
+
+      const factors = data.factors ?? {};
+      const rawReasoning = data.reasoning;
+      const reasoning: string[] = Array.isArray(rawReasoning)
+        ? rawReasoning.map((r: unknown) => (typeof r === 'string' ? r : r && typeof r === 'object' && 'msg' in r ? String((r as { msg: unknown }).msg) : String(r)))
+        : [];
+      const predictedPrice = Number(data.predictedPrice) || 0;
+      const rawCurrent = currentPriceProp ?? (stock && typeof stock === 'object' && 'price' in stock ? (stock as { price?: number }).price : undefined) ?? (stock && typeof stock === 'object' && 'currentPrice' in stock ? (stock as { currentPrice?: number }).currentPrice : undefined);
+      const currentPrice = Number(rawCurrent) || 0;
+      const direction = computeDirection(currentPrice, predictedPrice);
+      const riskLevel = isRiskLevel(data.riskLevel) ? data.riskLevel : 'medium';
+
+      const result: PredictionResult = {
+        predictedPrice,
+        confidence: Number(data.confidence) || 0,
+        direction,
+        timeframe: typeof data.timeframe === 'string' ? data.timeframe : '7 days',
+        reasoning,
+        riskLevel,
+        factors: {
+          technical: Number(factors.technical) || 0,
+          fundamental: Number(factors.fundamental) || 0,
+          sentiment: Number(factors.sentiment) || 0,
+        },
+      };
+
+      setProgress(100);
+      setCurrentStep(analysisSteps.length - 1);
+      setPredictionResult(result);
+      setTimeSlots({ currentSlot: slots.currentSlot, predictionTargetSlot: slots.predictionTargetSlot });
+      onPredictionComplete?.(result);
+      setLastRunTime(
+        new Intl.DateTimeFormat('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }).format(new Date())
+      );
+
+      const nextRun = Date.now() + getMsUntilNextFiveMinBoundary();
+      if (!isAutoRun) {
+        setAutoRefreshEnabled(true);
+        setAutoRefreshSymbol(symbol);
+      }
+      if (autoRefreshEnabled || !isAutoRun) {
+        setNextAutoRunAt(nextRun);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate prediction. Please try again.');
+    } finally {
+      clearInterval(stepsInterval);
+      setIsPredicting(false);
+    }
+  }, [autoRefreshEnabled, currentPriceProp, onPredictionComplete, stock]);
+
   useEffect(() => {
     if (!autoRefreshEnabled || !autoRefreshSymbol || !nextAutoRunAt) return;
     if (isPredicting) return;
@@ -138,7 +222,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     if (Date.now() >= nextAutoRunAt) {
       void runPrediction(autoRefreshSymbol, true);
     }
-  }, [autoRefreshEnabled, autoRefreshSymbol, isPredicting, nextAutoRunAt]);
+  }, [autoRefreshEnabled, autoRefreshSymbol, isPredicting, nextAutoRunAt, runPrediction]);
 
   const _generateMockPrediction = (stockData: Record<string, unknown>): PredictionResult => {
     const currentPrice = Number(stockData.currentPrice) || 0;
@@ -178,84 +262,6 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
       },
     };
   };
-
-  async function runPrediction(symbol: string, isAutoRun = false) {
-    if (!symbol) return;
-
-    setIsPredicting(true);
-    setCurrentStep(0);
-    setProgress(0);
-    setError(null);
-    setHasRequestedPrediction(true);
-
-    const stepsInterval = setInterval(() => {
-      setCurrentStep((s) => {
-        const next = Math.min(s + 1, analysisSteps.length - 1);
-        setProgress((next / analysisSteps.length) * 100);
-        return next;
-      });
-    }, 900);
-
-    try {
-      const slots = getFiveMinSlots();
-      const data = await predictSingleStock({
-        symbol,
-        current_time_slot: slots.currentSlot,
-        prediction_target_time: slots.predictionTargetSlot,
-      });
-
-      const factors = data.factors ?? {};
-      const rawReasoning = data.reasoning;
-      const reasoning: string[] = Array.isArray(rawReasoning)
-        ? rawReasoning.map((r: unknown) => (typeof r === 'string' ? r : r && typeof r === 'object' && 'msg' in r ? String((r as { msg: unknown }).msg) : String(r)))
-        : [];
-      const predictedPrice = Number(data.predictedPrice) || 0;
-      const rawCurrent = currentPriceProp ?? (stock && typeof stock === 'object' && 'price' in stock ? (stock as { price?: number }).price : undefined) ?? (stock && typeof stock === 'object' && 'currentPrice' in stock ? (stock as { currentPrice?: number }).currentPrice : undefined);
-      const currentPrice = Number(rawCurrent) || 0;
-      const direction = computeDirection(currentPrice, predictedPrice);
-      const result: PredictionResult = {
-        predictedPrice,
-        confidence: Number(data.confidence) || 0,
-        direction,
-        timeframe: typeof data.timeframe === 'string' ? data.timeframe : '7 days',
-        reasoning,
-        riskLevel: ['low', 'medium', 'high'].includes(data.riskLevel) ? data.riskLevel : 'medium',
-        factors: {
-          technical: Number(factors.technical) || 0,
-          fundamental: Number(factors.fundamental) || 0,
-          sentiment: Number(factors.sentiment) || 0,
-        },
-      };
-
-      setProgress(100);
-      setCurrentStep(analysisSteps.length - 1);
-      setPredictionResult(result);
-      setTimeSlots({ currentSlot: slots.currentSlot, predictionTargetSlot: slots.predictionTargetSlot });
-      onPredictionComplete?.(result);
-      setLastRunTime(
-        new Intl.DateTimeFormat('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        }).format(new Date())
-      );
-
-      const nextRun = Date.now() + getMsUntilNextFiveMinBoundary();
-      if (!isAutoRun) {
-        setAutoRefreshEnabled(true);
-        setAutoRefreshSymbol(symbol);
-      }
-      if (autoRefreshEnabled || !isAutoRun) {
-        setNextAutoRunAt(nextRun);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate prediction. Please try again.');
-    } finally {
-      clearInterval(stepsInterval);
-      setIsPredicting(false);
-    }
-  }
 
   const handlePredict = async () => {
     const symbol = stock?.symbol ? String(stock.symbol) : '';
