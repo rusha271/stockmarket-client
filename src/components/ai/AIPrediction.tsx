@@ -29,6 +29,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
+import { predictSingleStock } from '@/services/aiPredictionApi';
 
 interface PredictionResult {
   predictedPrice: number;
@@ -85,6 +86,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
   const [secondsUntilNextRun, setSecondsUntilNextRun] = useState<number | null>(null);
   const [lastRunTime, setLastRunTime] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<{ currentSlot: string; predictionTargetSlot: string } | null>(null);
+  const [hasRequestedPrediction, setHasRequestedPrediction] = useState(false);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const theme = useTheme();
 
@@ -101,6 +103,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     setSecondsUntilNextRun(null);
     setLastRunTime(null);
     setTimeSlots(null);
+    setHasRequestedPrediction(false);
   }, [stock?.symbol]);
 
   useEffect(() => {
@@ -183,6 +186,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
     setCurrentStep(0);
     setProgress(0);
     setError(null);
+    setHasRequestedPrediction(true);
 
     const stepsInterval = setInterval(() => {
       setCurrentStep((s) => {
@@ -194,31 +198,11 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
 
     try {
       const slots = getFiveMinSlots();
-      const res = await fetch('/api/ai-prediction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol,
-          current_time_slot: slots.currentSlot,
-          prediction_target_time: slots.predictionTargetSlot,
-        }),
+      const data = await predictSingleStock({
+        symbol,
+        current_time_slot: slots.currentSlot,
+        prediction_target_time: slots.predictionTargetSlot,
       });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        const err = data?.error;
-        const errStr =
-          typeof err === 'string'
-            ? err
-            : Array.isArray(err)
-              ? err.map((e: unknown) => (e && typeof e === 'object' && 'msg' in e ? (e as { msg: string }).msg : String(e))).join('. ')
-              : err && typeof err === 'object' && 'msg' in err
-                ? String((err as { msg: unknown }).msg)
-                : `Request failed (${res.status}). Ensure the AI backend is running.`;
-        setError(errStr);
-        return;
-      }
 
       const factors = data.factors ?? {};
       const rawReasoning = data.reasoning;
@@ -433,6 +417,11 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {analysisSteps[currentStep]}
               </Typography>
+              {!lastRunTime && hasRequestedPrediction && (
+                <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
+                  Loading model, please wait... first request can take up to 20 seconds.
+                </Typography>
+              )}
               
               <Typography variant="caption" color="text.secondary">
                 {Math.round(progress)}% complete

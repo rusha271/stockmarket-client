@@ -38,6 +38,7 @@ import { useTheme } from '@mui/material/styles';
 import { nifty50Stocks } from './StockSearch';
 import { StockDisplay } from './StockDisplay';
 import { AIPrediction } from './AIPrediction';
+import { predictAllStocks } from '@/services/aiPredictionApi';
 
 export interface StockQuoteFromAPI {
   symbol: string;
@@ -103,6 +104,7 @@ export const AIPredictionDashboard: React.FC = () => {
   const [dragSymbol, setDragSymbol] = useState<string | null>(null);
   const [profileRows, setProfileRows] = useState<ProfilingPredictionRow[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [hasRequestedProfilePrediction, setHasRequestedProfilePrediction] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileLastRunAt, setProfileLastRunAt] = useState<string | null>(null);
   const [profileNextRunIn, setProfileNextRunIn] = useState<number>(PROFILE_REFRESH_MS / 1000);
@@ -235,6 +237,7 @@ export const AIPredictionDashboard: React.FC = () => {
       return;
     }
     setProfileLoading(true);
+    setHasRequestedProfilePrediction(true);
     setProfileError(null);
     const slots = getFiveMinSlots();
     setProfileTimeSlots({
@@ -242,25 +245,11 @@ export const AIPredictionDashboard: React.FC = () => {
       predictionTargetSlot: slots.predictionTargetSlot,
     });
     try {
-      const res = await fetch('/api/ai-prediction/all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbols,
-          current_time_slot: slots.currentSlot,
-          prediction_target_time: slots.predictionTargetSlot,
-        }),
+      const data = await predictAllStocks({
+        symbols,
+        current_time_slot: slots.currentSlot,
+        prediction_target_time: slots.predictionTargetSlot,
       });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const errMsg =
-          typeof data?.error === 'string'
-            ? data.error
-            : `Request failed (${res.status})`;
-        setProfileError(errMsg);
-        return;
-      }
 
       const rawRows = Array.isArray(data)
         ? data
@@ -733,7 +722,7 @@ export const AIPredictionDashboard: React.FC = () => {
                     color="success"
                     size={isMobileLayout ? 'medium' : 'small'}
                     onClick={handleConfirmSelection}
-                    disabled={!profilingDirty}
+                    disabled={!profilingDirty || profileLoading}
                     fullWidth={isMobileLayout}
                     sx={{ minHeight: { xs: 48, md: 'auto' }, mt: { md: 1 } }}
                   >
@@ -959,6 +948,11 @@ export const AIPredictionDashboard: React.FC = () => {
                 {profileLoading && (
                   <Typography variant="caption" color="primary.main">
                     Fetching...
+                  </Typography>
+                )}
+                {profileLoading && !profileLastRunAt && hasRequestedProfilePrediction && (
+                  <Typography variant="caption" color="warning.main">
+                    Loading model, please wait... first request may take up to 20 seconds.
                   </Typography>
                 )}
                 {profileError && (

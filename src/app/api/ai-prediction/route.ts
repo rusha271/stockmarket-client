@@ -2,6 +2,9 @@ import { isUseMock } from '@/lib/featureFlags';
 import { getAiBackendBaseUrl } from '@/lib/resolveAiBackendUrl';
 import { mockAiPrediction } from '@/mocks/apiFixtures';
 
+const BACKEND_TIMEOUT_MS = 60_000;
+const BACKEND_RETRIES = 1;
+
 /**
  * Proxies AI prediction requests to the FastAPI (Python) backend.
  * The browser only calls this route (same origin), so there are no CORS issues.
@@ -42,6 +45,42 @@ function toCamelCaseResponse(data: Record<string, unknown>): Record<string, unkn
   };
 }
 
+async function fetchBackendWithRetry(url: string, payload: Record<string, unknown>): Promise<Response> {
+  for (let attempt = 0; attempt <= BACKEND_RETRIES; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      return response;
+    } catch (error) {
+      clearTimeout(timeout);
+      const isLastAttempt = attempt >= BACKEND_RETRIES;
+      if (!isLastAttempt) {
+        await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+        continue;
+      }
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Timed out while waiting for AI model warm-up. Please retry shortly.');
+      }
+      if (error instanceof TypeError) {
+        throw new Error('Network error connecting to AI backend.');
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('Failed to call AI backend.');
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -67,14 +106,7 @@ export async function POST(request: Request) {
     }
 
     const backendUrl = `${getAiBackendBaseUrl()}/predict`;
-    const res = await fetch(backendUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    const res = await fetchBackendWithRetry(backendUrl, payload);
 
     const text = await res.text();
     let data: Record<string, unknown>;

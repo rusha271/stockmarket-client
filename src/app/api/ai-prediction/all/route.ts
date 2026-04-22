@@ -3,6 +3,8 @@ import { getAiBackendBaseUrl } from '@/lib/resolveAiBackendUrl';
 import { mockPredictAllRows } from '@/mocks/apiFixtures';
 
 const QUOTE_BATCH_SIZE = 5;
+const BACKEND_TIMEOUT_MS = 60_000;
+const BACKEND_RETRIES = 1;
 
 interface PredictionRow {
   symbol: string;
@@ -39,6 +41,39 @@ async function fetchQuotesInBatches(baseUrl: string, symbols: string[]): Promise
     for (const r of results) map.set(r.symbol, r.currentPrice);
   }
   return map;
+}
+
+async function fetchPredictAllWithRetry(url: string, payload: Record<string, unknown>): Promise<Response> {
+  for (let attempt = 0; attempt <= BACKEND_RETRIES; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      return response;
+    } catch (error) {
+      clearTimeout(timeout);
+      const isLastAttempt = attempt >= BACKEND_RETRIES;
+      if (!isLastAttempt) {
+        await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+        continue;
+      }
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Timed out while waiting for AI model warm-up. Please retry shortly.');
+      }
+      if (error instanceof TypeError) {
+        throw new Error('Network error connecting to AI backend.');
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('Failed to call AI backend.');
 }
 
 export async function POST(request: Request) {
@@ -80,11 +115,7 @@ export async function POST(request: Request) {
       new URL(request.url).origin;
 
     const [backendRes, quotesMap] = await Promise.all([
-      fetch(`${getAiBackendBaseUrl()}/predict/all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
-      }),
+      fetchPredictAllWithRetry(`${getAiBackendBaseUrl()}/predict/all`, payload),
       fetchQuotesInBatches(baseUrl, symbols),
     ]);
 
