@@ -160,7 +160,10 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
         prediction_target_time: slots.predictionTargetSlot,
       });
 
-      const factors = data.factors ?? {};
+      const factors =
+        data.factors && typeof data.factors === 'object'
+          ? (data.factors as Record<string, unknown>)
+          : {};
       const rawReasoning = data.reasoning;
       const reasoning: string[] = Array.isArray(rawReasoning)
         ? rawReasoning.map((r: unknown) => (typeof r === 'string' ? r : r && typeof r === 'object' && 'msg' in r ? String((r as { msg: unknown }).msg) : String(r)))
