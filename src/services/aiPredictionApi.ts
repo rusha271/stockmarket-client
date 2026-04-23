@@ -18,7 +18,7 @@ interface RequestOptions {
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 1;
-const DEFAULT_AI_API_BASE_URL = 'http://13.235.245.48:8000';
+const DEFAULT_AI_API_BASE_URL = 'https://cardstock-landside-ogle.ngrok-free.dev';
 
 function getAiApiBaseUrl(): string {
   const raw =

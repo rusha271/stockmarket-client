@@ -1,6 +1,6 @@
 /**
  * FastAPI AI service URL. Prefer AI_BACKEND_URL, then NEXT_PUBLIC_AI_BACKEND_URL,
- * then NEXT_PUBLIC_API_URL. Falls back to deployed EC2 backend.
+ * then NEXT_PUBLIC_API_URL. Falls back to deployed AI backend.
  */
 export function getAiBackendBaseUrl(): string {
   const explicit = process.env.AI_BACKEND_URL?.trim();
@@ -9,5 +9,5 @@ export function getAiBackendBaseUrl(): string {
   if (aiPublic) return aiPublic.replace(/\/$/, '');
   const fromPublic = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (fromPublic) return fromPublic.replace(/\/$/, '');
-  return 'http://13.235.245.48:8000';
+  return 'https://cardstock-landside-ogle.ngrok-free.dev';
 }
