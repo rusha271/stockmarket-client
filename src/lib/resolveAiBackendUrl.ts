@@ -9,5 +9,5 @@ export function getAiBackendBaseUrl(): string {
   if (aiPublic) return aiPublic.replace(/\/$/, '');
   const fromPublic = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (fromPublic) return fromPublic.replace(/\/$/, '');
-  return 'http://13.200.250.191:8000';
+  return 'http://13.235.245.48:8000';
 }

@@ -8,6 +8,6 @@ export function isUseMock(): boolean {
 
 /** Base URL for real backend API calls (axios and AI backend resolution). No trailing slash. */
 export function getPublicApiBaseUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_API_URL || 'http://13.200.250.191:8000';
+  const raw = process.env.NEXT_PUBLIC_API_URL || 'http://13.235.245.48:8000';
   return raw.replace(/\/$/, '');
 }

@@ -18,6 +18,15 @@ interface RequestOptions {
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 1;
+const DEFAULT_AI_API_BASE_URL = 'http://13.235.245.48:8000';
+
+function getAiApiBaseUrl(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_AI_BACKEND_URL?.trim() ||
+    process.env.NEXT_PUBLIC_API_URL?.trim() ||
+    DEFAULT_AI_API_BASE_URL;
+  return raw.replace(/\/$/, '');
+}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -111,8 +120,9 @@ interface PredictAllRequest {
 }
 
 export async function predictSingleStock(body: PredictRequest): Promise<Record<string, unknown>> {
+  const baseUrl = getAiApiBaseUrl();
   return requestJson<Record<string, unknown>>(
-    '/api/ai-prediction',
+    `${baseUrl}/predict`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -123,8 +133,9 @@ export async function predictSingleStock(body: PredictRequest): Promise<Record<s
 }
 
 export async function predictAllStocks(body: PredictAllRequest): Promise<Record<string, unknown>> {
+  const baseUrl = getAiApiBaseUrl();
   return requestJson<Record<string, unknown>>(
-    '/api/ai-prediction/all',
+    `${baseUrl}/predict/all`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
