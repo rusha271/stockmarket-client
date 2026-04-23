@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { isMarketOpen } from '@/utils/timeSlots';
 
 const MARKET_INDICES_API = '/api/market-indices';
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 60_000;
 
 export interface MarketIndex {
   symbol: string;
