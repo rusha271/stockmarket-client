@@ -339,8 +339,14 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
         borderRadius: { xs: 2, md: 4 },
         border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
         boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
+        outline: `1px solid ${alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.05 : 0.28)}`,
         overflow: 'hidden',
         minWidth: 0,
+        transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+        '&:hover': {
+          transform: 'translateY(-1px)',
+          boxShadow: `0 28px 48px ${alpha(theme.palette.primary.main, 0.16)}`,
+        },
       }}
     >
       <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
@@ -363,7 +369,7 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
             <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
               Real Time Analysis
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
+            <Typography variant="body2" color="text.primary" sx={{ fontSize: { xs: '0.82rem', md: '0.9rem' }, opacity: 0.85 }}>
               Live market analysis for {stock && typeof stock === 'object' && 'symbol' in stock ? String((stock as { symbol?: string }).symbol ?? '') : ''}
             </Typography>
           </Box>
@@ -384,6 +390,8 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
                 borderRadius: 3,
                 fontSize: { xs: '0.95rem', md: '1.1rem' },
                 fontWeight: 700,
+                textTransform: 'none',
+                letterSpacing: 0.2,
                 background: theme.palette.primary.gradient,
                 boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
                 '&:hover': {
@@ -490,7 +498,8 @@ export const AIPrediction: React.FC<AIPredictionProps> = ({ stock, currentPrice:
                     : 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%)',
                   backdropFilter: 'blur(10px)',
                   border: `2px solid ${alpha(getDirectionColor(predictionResult.direction), 0.3)}`,
-                  borderRadius: 2,
+                  borderRadius: 3,
+                  boxShadow: `0 10px 26px ${alpha(getDirectionColor(predictionResult.direction), 0.18)}`,
                 }}
               >
                 <CardContent sx={{ p: { xs: 2.5, sm: 3, md: 4 } }}>

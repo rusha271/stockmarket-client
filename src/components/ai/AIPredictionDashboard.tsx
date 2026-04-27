@@ -282,6 +282,40 @@ export const AIPredictionDashboard: React.FC = () => {
         return { symbol, currentPrice, predictedPrice };
       });
 
+      const missingCurrentSymbols = mapped
+        .filter((row) => row.currentPrice == null)
+        .map((row) => row.symbol);
+
+      // Fill live current prices when backend /predict/all does not include them.
+      if (missingCurrentSymbols.length > 0) {
+        const quotePairs = await Promise.all(
+          missingCurrentSymbols.map(async (symbol) => {
+            try {
+              const res = await fetch(`/api/stock-quote?symbol=${encodeURIComponent(symbol)}`, {
+                headers: { Accept: 'application/json' },
+                cache: 'no-store',
+              });
+              if (!res.ok) return [symbol, null] as const;
+              const quote = (await res.json()) as { close?: unknown };
+              const close = quote?.close;
+              return [
+                symbol,
+                typeof close === 'number' && Number.isFinite(close) ? close : null,
+              ] as const;
+            } catch {
+              return [symbol, null] as const;
+            }
+          })
+        );
+
+        const livePriceMap = new Map<string, number | null>(quotePairs);
+        for (const row of mapped) {
+          if (row.currentPrice == null) {
+            row.currentPrice = livePriceMap.get(row.symbol) ?? null;
+          }
+        }
+      }
+
       setProfileRows(mapped);
       setProfileLastRunAt(
         new Intl.DateTimeFormat('en-IN', {
@@ -544,6 +578,13 @@ export const AIPredictionDashboard: React.FC = () => {
                 borderRadius: 4,
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                 boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
+                outline: `1px solid ${alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.05 : 0.3)}`,
+                transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 28px 48px ${alpha(theme.palette.primary.main, 0.15)}`,
+                  borderColor: alpha(theme.palette.primary.main, 0.35),
+                },
               }}
             >
               <Typography variant="h6" fontWeight={700} sx={{ mb: 1, fontSize: { xs: '1.05rem', sm: '1.25rem' } }}>
@@ -622,7 +663,12 @@ export const AIPredictionDashboard: React.FC = () => {
                         if (symbol) moveRightToLeft(symbol);
                         setDragSymbol(null);
                       }}
-                      sx={{ minHeight: { xs: 220, sm: 280 } }}
+                      sx={{
+                        minHeight: { xs: 220, sm: 280 },
+                        borderRadius: 3,
+                        borderColor: alpha(theme.palette.divider, 0.7),
+                        backgroundColor: alpha(theme.palette.background.paper, 0.55),
+                      }}
                     >
                       <Box sx={{ px: { xs: 1.25, sm: 2 }, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Checkbox
@@ -672,6 +718,11 @@ export const AIPredictionDashboard: React.FC = () => {
                                   py: { xs: 0.75, sm: 0.5 },
                                   cursor: isSelected ? 'grab' : 'pointer',
                                   '&:active': isSelected ? { cursor: 'grabbing' } : {},
+                                  borderRadius: 1.5,
+                                  mx: 0.5,
+                                  '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                  },
                                 }}
                               >
                                 <ListItemText primary={s.symbol} secondary={s.name} />
@@ -702,7 +753,12 @@ export const AIPredictionDashboard: React.FC = () => {
                     disabled
                     startIcon={<ArrowForwardIcon />}
                     fullWidth={isMobileLayout}
-                    sx={{ minHeight: { xs: 48, md: 'auto' } }}
+                    sx={{
+                      minHeight: { xs: 48, md: 'auto' },
+                      borderRadius: 2.5,
+                      textTransform: 'none',
+                      fontWeight: 700,
+                    }}
                   >
                     Add
                   </Button>
@@ -713,7 +769,12 @@ export const AIPredictionDashboard: React.FC = () => {
                     disabled
                     startIcon={<ArrowBackIcon />}
                     fullWidth={isMobileLayout}
-                    sx={{ minHeight: { xs: 48, md: 'auto' } }}
+                    sx={{
+                      minHeight: { xs: 48, md: 'auto' },
+                      borderRadius: 2.5,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                    }}
                   >
                     Remove
                   </Button>
@@ -724,7 +785,14 @@ export const AIPredictionDashboard: React.FC = () => {
                     onClick={handleConfirmSelection}
                     disabled={!profilingDirty || profileLoading}
                     fullWidth={isMobileLayout}
-                    sx={{ minHeight: { xs: 48, md: 'auto' }, mt: { md: 1 } }}
+                    sx={{
+                      minHeight: { xs: 48, md: 'auto' },
+                      mt: { md: 1 },
+                      borderRadius: 2.5,
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      boxShadow: `0 10px 22px ${alpha(theme.palette.success.main, 0.28)}`,
+                    }}
                   >
                     Confirm
                   </Button>
@@ -786,7 +854,7 @@ export const AIPredictionDashboard: React.FC = () => {
                                       secondaryTypographyProps={{ component: 'div' }}
                                       secondary={
                                         <Stack spacing={0.35} sx={{ mt: 0.25 }}>
-                                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: '0.78rem' }}>
+                                          <Typography variant="body2" color="text.primary" sx={{ lineHeight: 1.35, fontSize: '0.8rem', fontWeight: 500 }}>
                                             Current:{' '}
                                             {row?.currentPrice != null
                                               ? `₹${row.currentPrice.toLocaleString('en-IN', {
@@ -795,7 +863,7 @@ export const AIPredictionDashboard: React.FC = () => {
                                                 })}`
                                               : '--'}
                                           </Typography>
-                                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: '0.78rem' }}>
+                                          <Typography variant="body2" color="text.primary" sx={{ lineHeight: 1.35, fontSize: '0.8rem', fontWeight: 600 }}>
                                             Predicted:{' '}
                                             {row?.predictedPrice != null
                                               ? `₹${row.predictedPrice.toLocaleString('en-IN', {
@@ -827,7 +895,12 @@ export const AIPredictionDashboard: React.FC = () => {
                         }
                         setDragSymbol(null);
                       }}
-                      sx={{ minHeight: { xs: 220, sm: 280 } }}
+                      sx={{
+                        minHeight: { xs: 220, sm: 280 },
+                        borderRadius: 3,
+                        borderColor: alpha(theme.palette.divider, 0.7),
+                        backgroundColor: alpha(theme.palette.background.paper, 0.55),
+                      }}
                     >
                       <Box sx={{ px: { xs: 1.25, sm: 2 }, py: 1.5 }}>
                         <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
@@ -873,6 +946,11 @@ export const AIPredictionDashboard: React.FC = () => {
                                     cursor: 'grab',
                                     transition: 'background-color 0.2s ease, transform 0.15s ease',
                                     '&:active': { cursor: 'grabbing', transform: 'scale(0.995)' },
+                                    borderRadius: 1.5,
+                                    mx: 0.5,
+                                    '&:hover': {
+                                      backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                    },
                                   }}
                                 >
                                   <ListItemText
@@ -881,7 +959,7 @@ export const AIPredictionDashboard: React.FC = () => {
                                     secondaryTypographyProps={{ component: 'div' }}
                                     secondary={
                                       <Stack spacing={0.35} sx={{ mt: 0.25 }}>
-                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: { xs: '0.78rem', sm: '0.875rem' } }}>
+                                        <Typography variant="body2" color="text.primary" sx={{ lineHeight: 1.35, fontSize: { xs: '0.82rem', sm: '0.9rem' }, fontWeight: 500 }}>
                                           Current:{' '}
                                           {row?.currentPrice != null
                                             ? `₹${row.currentPrice.toLocaleString('en-IN', {
@@ -890,7 +968,7 @@ export const AIPredictionDashboard: React.FC = () => {
                                               })}`
                                             : '--'}
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35, fontSize: { xs: '0.78rem', sm: '0.875rem' } }}>
+                                        <Typography variant="body2" color="text.primary" sx={{ lineHeight: 1.35, fontSize: { xs: '0.82rem', sm: '0.9rem' }, fontWeight: 600 }}>
                                           Predicted:{' '}
                                           {row?.predictedPrice != null
                                             ? `₹${row.predictedPrice.toLocaleString('en-IN', {

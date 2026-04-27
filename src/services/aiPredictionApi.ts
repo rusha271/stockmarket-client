@@ -19,6 +19,7 @@ interface RequestOptions {
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 1;
 const DEFAULT_AI_API_BASE_URL = 'https://cardstock-landside-ogle.ngrok-free.dev';
+const MAX_SYMBOLS_PER_REQUEST = 50;
 
 function getAiApiBaseUrl(): string {
   const raw =
@@ -119,6 +120,14 @@ interface PredictAllRequest {
   prediction_target_time?: string;
 }
 
+function chunkSymbols(symbols: string[], chunkSize: number): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < symbols.length; i += chunkSize) {
+    chunks.push(symbols.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
 export async function predictSingleStock(body: PredictRequest): Promise<Record<string, unknown>> {
   const baseUrl = getAiApiBaseUrl();
   return requestJson<Record<string, unknown>>(
@@ -134,13 +143,42 @@ export async function predictSingleStock(body: PredictRequest): Promise<Record<s
 
 export async function predictAllStocks(body: PredictAllRequest): Promise<Record<string, unknown>> {
   const baseUrl = getAiApiBaseUrl();
-  return requestJson<Record<string, unknown>>(
-    `${baseUrl}/predict/all`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    },
-    { timeoutMs: 60_000, retries: 1 }
-  );
+  if (body.symbols.length <= MAX_SYMBOLS_PER_REQUEST) {
+    return requestJson<Record<string, unknown>>(
+      `${baseUrl}/predict/all`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+      { timeoutMs: 60_000, retries: 1 }
+    );
+  }
+
+  const symbolChunks = chunkSymbols(body.symbols, MAX_SYMBOLS_PER_REQUEST);
+  const mergedPredictions: unknown[] = [];
+
+  for (const symbols of symbolChunks) {
+    const chunkResponse = await requestJson<Record<string, unknown>>(
+      `${baseUrl}/predict/all`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...body,
+          symbols,
+        }),
+      },
+      { timeoutMs: 60_000, retries: 1 }
+    );
+
+    const rows = Array.isArray(chunkResponse)
+      ? chunkResponse
+      : Array.isArray(chunkResponse.predictions)
+        ? chunkResponse.predictions
+        : [];
+    mergedPredictions.push(...rows);
+  }
+
+  return { predictions: mergedPredictions };
 }
